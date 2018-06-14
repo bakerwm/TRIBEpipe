@@ -78,7 +78,7 @@ bam_in=${mapping_dir}/${prefix}/${prefix}.nodup.bam
 ## extract edits
 edits_dir="${outdir}/edits"
 [[ ! -d $edits_dir ]] && mkdir -p $edits_dir
-python $edits_parser -t $smp_type -i $bam_in -g $genome -o $edits_dir/${prefix}.edits.bedgraph --min_depth $min_depth --min_pct $min_pct
+python $edits_parser -t $smp_type -i $bam_in -g $genome -o $edits_dir/${prefix}.edits.bedgraph --depth_cutoff $min_depth --pct_cutoff $min_pct
 
 ## filtering
 
