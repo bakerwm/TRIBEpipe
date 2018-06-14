@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-extract edit sites from BAM
+extract edit sites from BAM file
 
 TRIBE sample:
 1. count > N (20)
@@ -46,8 +46,10 @@ output:
 
 import os, sys, argparse, tempfile, logging
 import shlex, subprocess
-
 import logging
+import pysam
+
+
 logging.basicConfig(format = '[%(asctime)s] %(message)s', 
                     datefmt = '%Y-%m-%d %H:%M:%S', 
                     level = logging.DEBUG)
@@ -58,19 +60,19 @@ def get_args():
         prog = 'edits_parser', description = 'Parsing editing events',
         epilog = 'Output: ')
     parser.add_argument('-t', default = 'RNA', choices = ['RNA', 'DNA'],
-        help = 'SNP type (RNA|DNA) for input BAM file')
+        help = 'SNP type (RNA|DNA) for input BAM file, default: RNA')
     parser.add_argument('-i', required = True, metavar = 'BAM', 
         type = argparse.FileType('r'),
-        help = 'BAM file')
+        help = 'alignments in BAM format')
     parser.add_argument('-g', required = True, metavar = 'Genome',
         type = argparse.FileType('r'),
-        help = 'Reference sequence in FASTA format, indexed')
+        help = 'Reference sequence in FASTA format')
     parser.add_argument('-o', required = True, metavar = 'OUTPUT',
-        help = 'path to save the results')    
-    parser.add_argument('--min_depth', default = 2, type = int, 
+        help = 'file to save the results')    
+    parser.add_argument('--depth_cutoff', default = 2, type = int, 
         metavar = 'depth',
         help = 'minimum read depth at editing position, default: 1')
-    parser.add_argument('--min_pct', default = 10, type = int,
+    parser.add_argument('--pct_cutoff', default = 10, type = int,
         metavar = 'percentage',
         help = 'minimum editing percentage [1-100]%%, default: 10')
     args = parser.parse_args()
@@ -187,11 +189,9 @@ def mpileup2acgt(pileup, quality, depth, reference, qlimit=53,
     return nucleot_dict
 
 
-
-
-def rna_snp_filter(fs, ncount, npct, strand = '+'):
+def rna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
     """
-    filt bases: count>ncount, pct>npct
+    filt bases: count>depth_cutoff, pct>pct_cutoff
     fit: samtools pileup output
     chr n_base ref_base read.depth A C G T strand
 
@@ -206,7 +206,6 @@ def rna_snp_filter(fs, ncount, npct, strand = '+'):
     6       C
     7       G
     8       T
-    9       strand
     """
     refbase, numTotal, numA, numC, numG, numT = fs[2:8]
     numN = int(numTotal) - int(numA) - int(numC) - int(numG) - int(numT)
@@ -217,21 +216,21 @@ def rna_snp_filter(fs, ncount, npct, strand = '+'):
     freqHit = 0
     if strand == "-":
         freqHit = freqC
-        if not refbase == "T" or freqC < npct or int(numTotal) < ncount:
+        if not refbase == "T" or freqC < pct_cutoff or int(numTotal) < depth_cutoff:
             return None
     else:
         freqHit = freqG
-        if not refbase == "A" or freqG < npct or int(numTotal) < ncount:
+        if not refbase == "A" or freqG < pct_cutoff or int(numTotal) < depth_cutoff:
             return None
     # BED output
     start = int(fs[1]) - 1
     name = fs[0] + '_' + fs[1] + '_{}_{}%'.format(numTotal, freqHit)
-    # fout = [fs[0], str(start), fs[1], name, '200', strand, fs[2]] + fs[3:]
-    fout = [fs[0], str(start), fs[1], str(freqHit), name, fs[2]] + fs[3:8] + [str(numN)]
-    return fout
+    f_out = [fs[0], start, fs[1], freqHit, name, fs[2]] + fs[3:8] + [str(numN)]
+    f_out = list(map(str, f_out))
+    return f_out
 
 
-def dna_snp_filter(fs, ncount, npct, strand = '+'):
+def dna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
     """
     filt bases: freqA > 80%, freqG = 0
     fit: samtools pileup output
@@ -248,7 +247,6 @@ def dna_snp_filter(fs, ncount, npct, strand = '+'):
     6       C
     7       G
     8       T
-    9       strand
     """
     refbase, numTotal, numA, numC, numG, numT = fs[2:8]
     numN = int(numTotal) - int(numA) - int(numC) - int(numG) - int(numT)
@@ -259,35 +257,33 @@ def dna_snp_filter(fs, ncount, npct, strand = '+'):
     freqHit = 0
     if strand == "-":
         freqHit = freqT
-        if not refbase == "T" or freqT < npct or freqC > 0:
+        if not refbase == "T" or freqT < pct_cutoff or freqC > 0:
             return None
     else:
         freqHit = freqA
-        if not refbase == "A" or freqA < npct or freqG > 0:
+        if not refbase == "A" or freqA < pct_cutoff or freqG > 0:
             return None
     # BED output
     start = int(fs[1]) - 1
     name = fs[0] + '_' + fs[1] + '_{}_{}%'.format(numTotal, freqHit)
-    # fout = [fs[0], str(start), fs[1], name, '200', strand, fs[2]] + fs[3:]
-    fout = [fs[0], str(start), fs[1], str(freqHit), name, fs[2]] + fs[3:8] + [str(numN)]
-    return fout
+    f_out = [fs[0], start, fs[1], freqHit, name, fs[2]] + fs[3:8] + [str(numN)]
+    f_out = list(map(str, f_out))
+    return f_out
 
 
-def snp_parser(fn, gfa, out_file, strand = '+', snp_type = 'rna',
-               min_depth = 1, npct = 10):
-    """extract nucleotide count table at each position"""
+def snp_parser(bam, genome, out_file, strand = '+', snp_type = 'rna', 
+               depth_cutoff = 1, pct_cutoff = 10):
+    """
+    extract nucleotide count table at each position
+    """
     # parameters
-    assert isinstance(min_depth, int)
+    # out_path
     out_path = os.path.dirname(out_file)
-    if (os.path.exists(out_path) or out_path == ''):
-        pass
-    else:
+    if out_path != '' and not os.path.exists(out_path):
         os.makedirs(out_path)
-    # faidx indexed file
-    gfa_idx = gfa + '.fai'
-    if not os.path.exists(gfa_idx):
-        cx = 'samtools faidx {}'.format(gfa)
-        px = subprocess.run(shlex.split(cx))
+    # indexed genome
+    if not os.path.exists(genome + '.fai'):
+        tmp = pysam.faidx(genome) # make faidx
     # dna or rna
     if snp_type.lower() == 'dna':
         snp_filter = dna_snp_filter
@@ -295,57 +291,62 @@ def snp_parser(fn, gfa, out_file, strand = '+', snp_type = 'rna',
         snp_filter = rna_snp_filter
     else:
         return None
-    # check strand
+    # strand
     if strand == '+':
-        c1 = 'samtools view -f 16 -bhS {}'.format(fn)
+        c1 = 'samtools view -f 16 -bhS {}'.format(bam)
     elif strand == '-':
-        c1 = 'samtools view -F 16 -bhS {}'.format(fn)
+        c1 = 'samtools view -F 16 -bhS {}'.format(bam)
     else:
         return None
-    # devnull
-    fnull = open(os.devnull, 'w')
-    c2 = 'samtools mpileup -f {} -'.format(gfa)
-    c3 = 'sequenza-utils pileup2acgt -n {} -p -'.format(min_depth)
+    # values
+    assert isinstance(depth_cutoff, int) and depth_cutoff > 0
+    assert isinstance(pct_cutoff, int) and pct_cutoff >= 0 and pct_cutoff <= 100
+
+    # run commands
+    c1 = 'samtools view -f 16 -bhS {}'.format(bam)
+    c2 = 'samtools mpileup -f {} -'.format(genome)
     p1 = subprocess.Popen(shlex.split(c1), stdout = subprocess.PIPE)
     p2 = subprocess.Popen(shlex.split(c2), stdin = p1.stdout, 
-                          stdout = subprocess.PIPE, stderr = fnull)
-    p3 = subprocess.Popen(shlex.split(c3), stdin = p2.stdout, 
-                           stdout = subprocess.PIPE,
-                           universal_newlines = True)
-    # filtering
-    with open(out_file, 'w') as fo:
+                          stdout = subprocess.PIPE, stderr = subprocess.PIPE, 
+                          universal_newlines = True)
+    
+    # parsing output
+    with open(out_file, 'wt') as fo:
         while True:
-            line = p3.stdout.readline().strip()
-            if not line:
-                break
-            if 'ref_base' in line:
-                continue
-            tabs = line.split('\t')
-            tabs_new = snp_filter(tabs, min_depth, npct, strand = strand)
-            if not tabs_new is None:
-                fo.write('\t'.join(tabs_new) + '\n')
-    fo.close() # 
+            line = p2.stdout.readline().strip()
+            if not line: break
+            chr, pos, ref, depth, pileup, quality = line.strip().split('\t')
+            ref = ref.upper()
+            depth = int(depth)
+            if depth >= depth_cutoff and depth_cutoff > 0 and ref != 'N':
+                acgt_res = mpileup2acgt(pileup, quality, depth, ref, qlimit = 25, 
+                                        noend = False, nostart = False)
+                f_out = [chr, pos, ref, depth, acgt_res['A'], acgt_res['C'], 
+                         acgt_res['G'], acgt_res['T']]
+                # filtering
+                f_out2 = snp_filter(f_out, depth_cutoff, pct_cutoff, 
+                                    strand = strand)
+                if not f_out2 is None:
+                    fo.write('\t'.join(list(map(str, f_out2))) + '\n')
     return True
+
 
 
 def main():
     logging.info('calling edits')
     args = get_args() #
-    assert args.min_depth > 0
-    assert args.min_pct >= 0 and args.min_pct <= 100
-    # # for DNA SNPs
-    # if args.t.lower() == 'dna':
-    #     args.min_pct = 80 # predefined
-    # forward
+    assert args.depth_cutoff > 0
+    assert args.pct_cutoff >= 0 and args.pct_cutoff <= 100
+    # forwardd
     file_fwd = args.o + '.fwd.tmp'
     snp_parser(args.i.name, args.g.name, file_fwd, strand = '+', 
-               snp_type = args.t, min_depth = args.min_depth, 
-               npct = args.min_pct)
+               snp_type = args.t, depth_cutoff = args.depth_cutoff,
+               pct_cutoff = args.pct_cutoff)
     # reverse
     file_rev = args.o + '.rev.tmp'
     snp_parser(args.i.name, args.g.name, file_rev, strand = '-', 
-               snp_type = args.t, min_depth = args.min_depth, 
-               npct = args.min_pct)
+               snp_type = args.t, depth_cutoff = args.depth_cutoff,
+               pct_cutoff = args.pct_cutoff)
     # merge two files
     os.system('cat {} {} > {}'.format(file_fwd, file_rev, args.o))
     os.remove(file_fwd)
