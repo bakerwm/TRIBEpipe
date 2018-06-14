@@ -272,7 +272,7 @@ def dna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
 
 
 def snp_parser(bam, genome, out_file, strand = '+', snp_type = 'rna', 
-               depth_cutoff = 1, pct_cutoff = 10):
+               depth_cutoff = 1, pct_cutoff = 10, append = False):
     """
     extract nucleotide count table at each position
     """
@@ -302,6 +302,9 @@ def snp_parser(bam, genome, out_file, strand = '+', snp_type = 'rna',
     assert isinstance(depth_cutoff, int) and depth_cutoff > 0
     assert isinstance(pct_cutoff, int) and pct_cutoff >= 0 and pct_cutoff <= 100
 
+    # write mode
+    write_mode = 'at' if append else 'wt'
+
     # run commands
     c1 = 'samtools view -f 16 -bhS {}'.format(bam)
     c2 = 'samtools mpileup -f {} -'.format(genome)
@@ -311,7 +314,7 @@ def snp_parser(bam, genome, out_file, strand = '+', snp_type = 'rna',
                           universal_newlines = True)
     
     # parsing output
-    with open(out_file, 'wt') as fo:
+    with open(out_file, write_mode) as fo:
         while True:
             line = p2.stdout.readline().strip()
             if not line: break
@@ -337,21 +340,14 @@ def main():
     args = get_args() #
     assert args.depth_cutoff > 0
     assert args.pct_cutoff >= 0 and args.pct_cutoff <= 100
-    # forwardd
-    file_fwd = args.o + '.fwd.tmp'
-    snp_parser(args.i.name, args.g.name, file_fwd, strand = '+', 
+    # forward strand
+    snp_parser(args.i.name, args.g.name, args.o, strand = '+', 
                snp_type = args.t, depth_cutoff = args.depth_cutoff,
                pct_cutoff = args.pct_cutoff)
-    # reverse
-    file_rev = args.o + '.rev.tmp'
-    snp_parser(args.i.name, args.g.name, file_rev, strand = '-', 
+    # reverse strand
+    snp_parser(args.i.name, args.g.name, args.o, strand = '-', 
                snp_type = args.t, depth_cutoff = args.depth_cutoff,
-               pct_cutoff = args.pct_cutoff)
-    # merge two files
-    os.system('cat {} {} > {}'.format(file_fwd, file_rev, args.o))
-    os.remove(file_fwd)
-    os.remove(file_rev)
-
+               pct_cutoff = args.pct_cutoff, append = True)
 
 if __name__ == '__main__':
     main()
