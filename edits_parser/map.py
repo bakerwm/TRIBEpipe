@@ -20,12 +20,8 @@ import numpy as np
 import pandas as pd
 import binascii
 import pysam
-import pathlib
-import warnings
-# from .settings import goldclip_home
-# from .helper import *
-
 import logging
+
 logging.basicConfig(format = '[%(asctime)s] %(message)s', 
                     datefmt = '%Y-%m-%d %H:%M:%S', 
                     level = logging.DEBUG)
