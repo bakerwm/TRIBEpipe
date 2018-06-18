@@ -172,20 +172,38 @@ def bed_anno(bed_in, bed_info, bed_out):
 
 
 
-def main():
-    args = get_args()
+def edits_filter(edits_tribe, edits_control, gtf, edits_tribe_filt):
+    """filtering edits"""
     # convert GTF to BED, filt feature
     gene_bed = tempfile.NamedTemporaryFile()
-    gtf2bed(args.g, gene_bed.name, feature = 'gene')
-    # gene_bed = 'Drosophila_melanogaster.BDGP6.92.bed'
-
+    gtf2bed(gtf, gene_bed.name, feature = 'gene')
+    
     # annotate
-    ex_files = [i.name for i in args.c]
-    b1 = bed_filter(pybedtools.BedTool(args.i), ex_files)
-    bed_anno(b1, gene_bed.name, args.o)
+    ex_files = [i.name for i in edits_control]
+    b1 = bed_filter(pybedtools.BedTool(edits_tribe), ex_files)
+    bed_anno(b1, gene_bed.name, edits_tribe_filt)
 
     # remove temp files
     os.remove(gene_bed.name)
+
+    return edits_tribe_filt
+
+
+def main():
+    args = get_args()
+    edits_filter(args.i, args.c, args.g, args.o)
+    # # convert GTF to BED, filt feature
+    # gene_bed = tempfile.NamedTemporaryFile()
+    # gtf2bed(args.g, gene_bed.name, feature = 'gene')
+    # # gene_bed = 'Drosophila_melanogaster.BDGP6.92.bed'
+
+    # # annotate
+    # ex_files = [i.name for i in args.c]
+    # b1 = bed_filter(pybedtools.BedTool(args.i), ex_files)
+    # bed_anno(b1, gene_bed.name, args.o)
+
+    # # remove temp files
+    # os.remove(gene_bed.name)
 
 
 if __name__ == '__main__':

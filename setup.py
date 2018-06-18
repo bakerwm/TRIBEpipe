@@ -34,7 +34,7 @@ setup(
     # data_files=[('bin', ['bin/*.sh'])],
     #scripts=['bin/funniest-joke'],
     entry_points={
-        'console_scripts': ['TRIBEpipe=edits_parser.TRIBEpipe:main'],
+        'console_scripts': ['TRIBEpipe=TRIBEpipe.TRIBEpipe:main'],
     },
     test_suite='nose.collector',
     tests_require=['nose'],

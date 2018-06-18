@@ -336,19 +336,37 @@ def snp_parser(bam, genome, out_file, strand = '+', snp_type = 'rna',
 
 
 
+def edits_parser(bam, genome, outfile, snp_type, depth_cutoff, pct_cutoff):
+    try:
+        # forward strand    
+        snp_parser(bam, genome, outfile, strand = '+', snp_type = snp_type, 
+                   depth_cutoff = depth_cutoff, pct_cutoff = pct_cutoff)
+        # reverse strand
+        snp_parser(bam, genome, outfile, strand = '-', snp_type = snp_type, 
+                   depth_cutoff = depth_cutoff, pct_cutoff = pct_cutoff, 
+                   append = True)
+    except IOError:
+        logging.info('fail to call edits')
+    return outfile
+
+
+
+
 def main():
     logging.info('calling edits')
     args = get_args() #
     assert args.depth_cutoff > 0
     assert args.pct_cutoff >= 0 and args.pct_cutoff <= 100
-    # forward strand
-    snp_parser(args.i.name, args.g.name, args.o, strand = '+', 
-               snp_type = args.t, depth_cutoff = args.depth_cutoff,
-               pct_cutoff = args.pct_cutoff)
-    # reverse strand
-    snp_parser(args.i.name, args.g.name, args.o, strand = '-', 
-               snp_type = args.t, depth_cutoff = args.depth_cutoff,
-               pct_cutoff = args.pct_cutoff, append = True)
+    edits_parser(args.i.name, args.g.name, args.o, args.t, args.depth_cutoff,
+                 args.pct_cutoff)
+    # # forward strand
+    # snp_parser(args.i.name, args.g.name, args.o, strand = '+', 
+    #            snp_type = args.t, depth_cutoff = args.depth_cutoff,
+    #            pct_cutoff = args.pct_cutoff)
+    # # reverse strand
+    # snp_parser(args.i.name, args.g.name, args.o, strand = '-', 
+    #            snp_type = args.t, depth_cutoff = args.depth_cutoff,
+    #            pct_cutoff = args.pct_cutoff, append = True)
 
 if __name__ == '__main__':
     main()
