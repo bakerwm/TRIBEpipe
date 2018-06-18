@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 extract edit sites from BAM file
 
@@ -57,7 +58,7 @@ logging.basicConfig(format = '[%(asctime)s] %(message)s',
 def get_args():
     ## parsing arguments
     parser = argparse.ArgumentParser(
-        prog = 'edits_parser', description = 'Parsing editing events',
+        prog = 'edits_parser', description = 'Parsing TRIBE editing sites',
         epilog = 'Output: ')
     parser.add_argument('-t', default = 'RNA', choices = ['RNA', 'DNA'],
         help = 'SNP type (RNA|DNA) for input BAM file, default: RNA')

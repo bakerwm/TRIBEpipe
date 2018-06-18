@@ -1,0 +1,13 @@
+# bioconda
+fastqc>=0.11.6
+cutadapt>=1.16
+bowtie>=1.1.2
+bowtie2>=2.3.4
+STAR>=2.5.2a
+samtools>=1.4
+bedtools>=2.25.0
+fastx_toolkit>=0.0.14
+numpy>=1.14.0
+pandas>=0.22
+pybedtools>=0.7.10
+
