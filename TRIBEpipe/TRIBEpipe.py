@@ -101,12 +101,6 @@ def get_args():
     return args
 
 
-
-## trimming
-
-
-
-
 def tribe_edits_parser(fqs, outdir, genome, genome_index, ad3, len_min, cut, 
                        threads, depth_cutoff, pct_cutoff):
     """extract editing events from TRIBE samples"""
@@ -134,7 +128,9 @@ def tribe_edits_parser(fqs, outdir, genome, genome_index, ad3, len_min, cut,
         edits_parser.edits_parser(bam, genome, bam_edits, 'RNA', 
                                   depth_cutoff, pct_cutoff)
         tribe_edits.append(bam_edits)
+        
     return tribe_edits
+
 
 
 def gDNA_edits_parser(fq, outdir, genome, genome_index, ad3, len_min, cut, 
@@ -203,7 +199,6 @@ def genome_parser(genome, path = None, aligner = 'STAR'):
 def main():
     args = get_args()
 
-
     ## prepare genome
     genome = args.g
     genome_index, genome_gtf, genome_fa = genome_parser(args.g, args.genome_data)
@@ -211,6 +206,7 @@ def main():
     ## prepare dir
     subdirs = [os.path.join(args.o, i) for i in ['TRIBE', 'gDNA', 'wt_RNA']]
 
+    ## extract edits
     tribe_edits = tribe_edits_parser([i.name for i in args.i], subdirs[0], 
                                      genome, genome_index, args.a, args.m, 
                                      args.cut, args.threads, 
