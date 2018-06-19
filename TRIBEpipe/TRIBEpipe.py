@@ -149,7 +149,7 @@ def gDNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut,
 
     ## extract edits
     gDNA_edits_dir = os.path.join(outdir, 'edits')
-    prefix = os.path.split(os.path.basename(gDNA_map_bam[0]))[0]
+    prefix = os.path.splitext(os.path.basename(gDNA_map_bam[0]))[0]
     bam_edits = os.path.join(gDNA_edits_dir, prefix + '.edits.bedgraph')
     gDNA_edits = edits_parser.edits_parser(gDNA_map_bam[0], genome_fa, bam_edits, 
                                            'DNA', depth_cutoff, pct_cutoff)
@@ -175,10 +175,10 @@ def wtRNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut,
 
     ## extract edits
     wtRNA_edits_dir = os.path.join(outdir, 'edits')
-    prefix = os.path.split(os.path.basename(wtRNA_map_bam[0]))[0]
+    prefix = os.path.splitext(os.path.basename(wtRNA_map_bam[0]))[0]
     bam_edits = os.path.join(wtRNA_edits_dir, prefix + '.edits.bedgraph')
     wtRNA_edits = edits_parser.edits_parser(wtRNA_map_bam[0], genome_fa, bam_edits, 
-                                           'DNA', depth_cutoff, pct_cutoff)
+                                           'RNA', depth_cutoff, pct_cutoff)
 
     return wtRNA_edits
 
