@@ -8,3 +8,6 @@ build/
 # Python egg metadata
 /*.egg-info
 /*.egg
+
+# docs
+docs/build/
