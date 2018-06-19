@@ -274,7 +274,7 @@ def dna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
     return f_out
 
 
-def snp_parser(bam, genome, out_file, strand = '+', snp_type = 'rna', 
+def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna', 
                depth_cutoff = 1, pct_cutoff = 10, append = False):
     """
     extract nucleotide count table at each position
@@ -285,8 +285,8 @@ def snp_parser(bam, genome, out_file, strand = '+', snp_type = 'rna',
     if out_path != '' and not os.path.exists(out_path):
         os.makedirs(out_path)
     # indexed genome
-    if not os.path.exists(genome + '.fai'):
-        tmp = pysam.faidx(genome) # make faidx
+    if not os.path.exists(genome_fa + '.fai'):
+        tmp = pysam.faidx(genome_fa) # make faidx
     # dna or rna
     if snp_type.lower() == 'dna':
         snp_filter = dna_snp_filter
@@ -310,7 +310,7 @@ def snp_parser(bam, genome, out_file, strand = '+', snp_type = 'rna',
 
     # run commands
     c1 = 'samtools view -f 16 -bhS {}'.format(bam)
-    c2 = 'samtools mpileup -f {} -'.format(genome)
+    c2 = 'samtools mpileup -f {} -'.format(genome_fa)
     p1 = subprocess.Popen(shlex.split(c1), stdout = subprocess.PIPE)
     p2 = subprocess.Popen(shlex.split(c2), stdin = p1.stdout, 
                           stdout = subprocess.PIPE, stderr = subprocess.PIPE, 
@@ -338,17 +338,18 @@ def snp_parser(bam, genome, out_file, strand = '+', snp_type = 'rna',
 
 
 
-def edits_parser(bam, genome, outfile, snp_type, depth_cutoff, pct_cutoff,
+def edits_parser(bam, genome_fa, outfile, snp_type, depth_cutoff, pct_cutoff,
                  overwrite = False):
+    logging.info('calling edits')
     if os.path.exists(outfile) and overwrite is False:
         logging.info('edits file exists, skipping: ' + outfile)
     else:
         try:
             # forward strand    
-            snp_parser(bam, genome, outfile, strand = '+', snp_type = snp_type,
+            snp_parser(bam, genome_fa, outfile, strand = '+', snp_type = snp_type,
                        depth_cutoff = depth_cutoff, pct_cutoff = pct_cutoff)
             # reverse strand
-            snp_parser(bam, genome, outfile, strand = '-', snp_type = snp_type,
+            snp_parser(bam, genome_fa, outfile, strand = '-', snp_type = snp_type,
                        depth_cutoff = depth_cutoff, pct_cutoff = pct_cutoff, 
                        append = True)
         except IOError:
@@ -359,7 +360,6 @@ def edits_parser(bam, genome, outfile, snp_type, depth_cutoff, pct_cutoff,
 
 
 def main():
-    logging.info('calling edits')
     args = get_args() #
     assert args.depth_cutoff > 0
     assert args.pct_cutoff >= 0 and args.pct_cutoff <= 100
