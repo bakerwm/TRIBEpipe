@@ -39,7 +39,7 @@ def get_args():
         help = 'Sequencing reads in FASTQ format, support (*.gz), 1-4 files.')
     parser.add_argument('-a', 
         default = 'AGATCGGAAGAGCGGTTCAGCAGGAATGCCGAGACCGATCTCGTATGCCGTCTTCTGCTTG', 
-        metavar = 'adapter', type = str,
+        metavar = 'adapter',
         help = '3 prime adapter sequence, \
         default [AGATCGGAAGAGCGGTTCAGCAGGAATGCCGAGACCGATCTCGTATGCCGTCTTCTGCTTG].')
     parser.add_argument('-o', default = None, metavar = 'out_path', 
@@ -100,7 +100,10 @@ def se_trimmer(read_in, adapter3, len_min = 15, *, out_path = None,
     truseq_p7b = 'GATCGGAAGAGCGGTTCAGCAGGAATGCCGAG'
     truseq_p7c = 'GCGGTTCAGCAGGAATGCCGAG'
     truseq_univ = 'AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT'
-    ads = [adapter3, pcr_r2, truseq_p7a, truseq_p7b, truseq_p7c, truseq_univ]
+    if adapter3 is None:
+        ads = [pcr_r2, truseq_p7a, truseq_p7b, truseq_p7c, truseq_univ]
+    else:
+        ads = [adapter3, pcr_r2, truseq_p7a, truseq_p7b, truseq_p7c, truseq_univ]
     para_ad = ' '.join(['-a {}'.format(i) for i in ads])
     ## cut N
     if not cut == 0:
@@ -193,14 +196,16 @@ def trim(fqs, adapter3, out_path, len_min = 15, qual_min = 20, cut = 0,
             logging.info('file exists, trimming skipped...' + q_out)
         else:
             q_out = se_trimmer(fq, adapter3, len_min, out_path = out_path,
-                qual_min = qual_min, err_rate = err_rate,
-                multi_cores = multi_cores, overlap = overlap, cut = cut)
+                               qual_min = qual_min, err_rate = err_rate,
+                               multi_cores = multi_cores, overlap = overlap, 
+                               cut = cut)
             # count reads
             fq_n = int(file_row_counter(q_out) / 4)
             fq_prefix = re.sub(r'.f[ast]*q(.gz)?', '', os.path.basename(fq))
             fq_n_file = os.path.join(out_path, fq_prefix + ".clean.txt")
             with open(fq_n_file, "w") as f:
                 f.write(str(fq_n) + '\n')
+            fq_out.append(q_out)
     return fq_out
 
 
@@ -212,7 +217,6 @@ def main():
     p = trim(fqs = [f.name for f in args.i], adapter3 = args.a, 
         out_path = args.o, len_min = args.m, qual_min = args.q, cut = args.cut,
         err_rate = args.e, multi_cores = args.threads, overlap = args.O)
-    # print(p)
 
 
 if __name__ ==  '__main__':

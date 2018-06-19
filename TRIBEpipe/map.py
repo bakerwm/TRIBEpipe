@@ -518,7 +518,7 @@ def merge_map_wrapper(fn, save = True):
     return df
 
 
-def map(fqs, smp_name, out_path, genome, multi_cores, genome_index, 
+def map(fqs, smp_name, out_path, multi_cores, genome_index, 
         map_tools = 'bowtie'):
     """
     mapping reads to multiple indexes, one-by-one
@@ -529,13 +529,12 @@ def map(fqs, smp_name, out_path, genome, multi_cores, genome_index,
     Input: idx1, idx2, ...
     Output: RTStops
     """    
-    # idxs = aligner_index_picker(genome, spikein)
     bam_files = []
     logging.info('mapping reads')
     map_dict = {'bowtie': bowtie_map_se,
                 'bowtie2': bowtie2_map_se,
                 'star': star_map_se}
-    mapper = map_dict[map_tools]
+    mapper = map_dict[map_tools.lower()]
     for read in fqs:
         read_prefix = re.sub(r'.f[astq]*(.gz)?', '', os.path.basename(read))
         read_prefix = re.sub('\.clean|\.nodup|\.cut\-?\d+', '', read_prefix) #
@@ -574,7 +573,7 @@ def main():
     map_tools = args.t.lower()
     rm_dup = args.rmdup
     # mapping
-    p = map(fqs, smp_name, out_path, genome, multi_cores, genome_index, map_tools = map_tools)
+    p = map(fqs, smp_name, out_path, multi_cores, genome_index, map_tools = map_tools)
     p_out = p
     if args.rmdup:
         px = []
