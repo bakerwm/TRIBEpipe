@@ -458,7 +458,7 @@ def rep_map_wrapper(fn, save = True):
         output: type, count
         """
         try:
-            group = file.split('.')[-2]
+            group = os.path.basename(file).split('.')[-2]
             group = re.sub('map_', '', group)
             name = os.path.basename(file).split('.')[0]
             with open(file, 'r') as f:
