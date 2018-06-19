@@ -63,7 +63,6 @@ def get_args():
         type = argparse.FileType('r'),
         help = 'wild-type RNA-seq data in fastq format, as control')
     parser.add_argument('-g', required = True, metavar = 'Genome',
-        type = argparse.FileType('r'),
         help = 'genome build of the reference, default: [dm6]')
     parser.add_argument('-o', required = True, metavar = 'OUTDIR',
         help = 'the directory to save results')
@@ -85,7 +84,7 @@ def get_args():
     parser.add_argument('--wtRNA_depth_cutoff', default = 10, type = int, 
         metavar = 'wtRNA_depth',
         help = 'minimum read depth at editing position for wtRNA samples, default: 10')
-    parser.add_argument('-a', metavar = 'adapter', 
+    parser.add_argument('-a', metavar = 'adapter', default = None,
         help = 'adapter sequences at 3-prime end, default: TruSeq')
     parser.add_argument('-m', metavar = 'min_length', type = int, default = 19,
         help = 'minimum length of reads, default: 19')
@@ -101,7 +100,7 @@ def get_args():
     return args
 
 
-def tribe_edits_parser(fqs, outdir, genome, genome_index, ad3, len_min, cut, 
+def tribe_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut, 
                        threads, depth_cutoff, pct_cutoff):
     """extract editing events from TRIBE samples"""
     ## Trimming
@@ -114,7 +113,7 @@ def tribe_edits_parser(fqs, outdir, genome, genome_index, ad3, len_min, cut,
     tribe_map_dir = os.path.join(outdir, 'mapping')
     tribe_map_bam = []
     for fq in tribe_clean_fq:       
-        b = map.map(fq, 'demo', tribe_map_dir, genome, threads, genome_index,
+        b = map.map([fq], 'demo', tribe_map_dir, threads, genome_index,
                     map_tools = 'STAR')
         bx = map.pcr_dup_remover(b[0])
         tribe_map_bam.append(bx)
@@ -123,17 +122,17 @@ def tribe_edits_parser(fqs, outdir, genome, genome_index, ad3, len_min, cut,
     tribe_edits_dir = os.path.join(outdir, 'edits')
     tribe_edits = []
     for bam in tribe_map_bam:
-        prefix = os.path.split(os.path.basename(bam))[0]
+        prefix = os.path.splitext(os.path.basename(bam))[0]
         bam_edits = os.path.join(tribe_edits_dir, prefix + '.edits.bedgraph')
-        edits_parser.edits_parser(bam, genome, bam_edits, 'RNA', 
+        edits_parser.edits_parser(bam, genome_fa, bam_edits, 'RNA', 
                                   depth_cutoff, pct_cutoff)
         tribe_edits.append(bam_edits)
-        
+
     return tribe_edits
 
 
 
-def gDNA_edits_parser(fq, outdir, genome, genome_index, ad3, len_min, cut, 
+def gDNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut, 
                        threads, depth_cutoff, pct_cutoff):
     """extract editing events from genomic DNA-seq sample"""
     ## Trimming
@@ -144,7 +143,7 @@ def gDNA_edits_parser(fq, outdir, genome, genome_index, ad3, len_min, cut,
     
     ## Mapping
     gDNA_map_dir = os.path.join(outdir, 'mapping')
-    gDNA_map_bam = map.map(gDNA_clean_fq[0], 'demo', gDNA_map_dir, genome,
+    gDNA_map_bam = map.map([gDNA_clean_fq[0]], 'demo', gDNA_map_dir,
                            threads, genome_index, map_tools = 'STAR')
     # bx = map.pcr_dup_remover(b[0])
 
@@ -152,12 +151,14 @@ def gDNA_edits_parser(fq, outdir, genome, genome_index, ad3, len_min, cut,
     gDNA_edits_dir = os.path.join(outdir, 'edits')
     prefix = os.path.split(os.path.basename(gDNA_map_bam[0]))[0]
     bam_edits = os.path.join(gDNA_edits_dir, prefix + '.edits.bedgraph')
-    gDNA_edits = edits_parser.edits_parser(gDNA_map_bam[0], genome, bam_edits, 
+    gDNA_edits = edits_parser.edits_parser(gDNA_map_bam[0], genome_fa, bam_edits, 
                                            'DNA', depth_cutoff, pct_cutoff)
 
+    return gDNA_edits
 
 
-def wtRNA_edits_parser(fq, outdir, genome, genome_index, ad3, len_min, cut, 
+
+def wtRNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut, 
                        threads, depth_cutoff, pct_cutoff):
     """extract editing events from genomic DNA-seq sample"""
     ## Trimming
@@ -168,7 +169,7 @@ def wtRNA_edits_parser(fq, outdir, genome, genome_index, ad3, len_min, cut,
     
     ## Mapping
     wtRNA_map_dir = os.path.join(outdir, 'mapping')
-    wtRNA_map_bam = map.map(wtRNA_clean_fq[0], 'demo', wtRNA_map_dir, genome,
+    wtRNA_map_bam = map.map([wtRNA_clean_fq[0]], 'demo', wtRNA_map_dir,
                            threads, genome_index, map_tools = 'STAR')
     # bx = map.pcr_dup_remover(b[0])
 
@@ -176,8 +177,10 @@ def wtRNA_edits_parser(fq, outdir, genome, genome_index, ad3, len_min, cut,
     wtRNA_edits_dir = os.path.join(outdir, 'edits')
     prefix = os.path.split(os.path.basename(wtRNA_map_bam[0]))[0]
     bam_edits = os.path.join(wtRNA_edits_dir, prefix + '.edits.bedgraph')
-    wtRNA_edits = edits_parser.edits_parser(wtRNA_map_bam[0], genome, bam_edits, 
+    wtRNA_edits = edits_parser.edits_parser(wtRNA_map_bam[0], genome_fa, bam_edits, 
                                            'DNA', depth_cutoff, pct_cutoff)
+
+    return wtRNA_edits
 
 
 
@@ -201,38 +204,41 @@ def main():
 
     ## prepare genome
     genome = args.g
-    genome_index, genome_gtf, genome_fa = genome_parser(args.g, args.genome_data)
+    genome_fa, genome_gtf, genome_index = genome_parser(args.g, args.genome_data)
 
     ## prepare dir
     subdirs = [os.path.join(args.o, i) for i in ['TRIBE', 'gDNA', 'wt_RNA']]
 
     ## extract edits
+    logging.info('step 1. processing TRIBE samples')
     tribe_edits = tribe_edits_parser([i.name for i in args.i], subdirs[0], 
-                                     genome, genome_index, args.a, args.m, 
+                                     genome_fa, genome_index, args.a, args.m, 
                                      args.cut, args.threads, 
                                      args.tribe_depth_cutoff, 
                                      args.tribe_pct_cutoff)
 
+    logging.info('step 2. processing genomic DNA sample')
     gDNA_edits = gDNA_edits_parser(args.gDNA.name, subdirs[1], 
-                                   genome, genome_index, args.a, args.m, 
+                                   genome_fa, genome_index, args.a, args.m, 
                                    args.cut, args.threads, 
                                    args.gDNA_depth_cutoff, 
                                    args.gDNA_pct_cutoff)
 
+    logging.info('step 3. processing wildtype RNA-seq sample')
     wtRNA_edits = wtRNA_edits_parser(args.wtRNA.name, subdirs[2], 
-                                     genome, genome_index, args.a, args.m, 
+                                     genome_fa, genome_index, args.a, args.m, 
                                      args.cut, args.threads, 
                                      args.wtRNA_depth_cutoff, 
                                      args.wtRNA_pct_cutoff)
 
-    ## filt
+    logging.info('step 4. filtering TRIBE editing events')
+    final_dir = os.path.join(args.o, 'TRIBE', 'edits_filted')
     for i in tribe_edits:
-        i_dir = os.path.join(os.path.dirname(os.path.dirname(i)), 'edits_filted')
-        i_name = os.path.basename(i)
-        i_file = os.path.join(i_dir, i_name)
-        edits_filter.edits_filter(i, [gDNA_edits, wtRNA_edits] , genome_gtf, i_file)
+        i_file = os.path.join(final_dir, os.path.basename(i))
+        edits_final = edits_filter.edits_filter(i, gDNA_edits, wtRNA_edits,
+                                                genome_gtf, i_file, False)
 
-    print("This is the TRIBEpipe")
+    logging.info('finish.')
 
 
 if __name__ == '__main__':
