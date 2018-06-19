@@ -168,7 +168,8 @@ def bed_anno(bed_in, bed_info, bed_out):
     assert isinstance(bed_in, pybedtools.bedtool.BedTool)
     # b_in = pybedtools.BedTool(bed_in)
     b_info = pybedtools.BedTool(bed_info)
-    t = bed_in.intersect(b_info, wa = True, wb = True, stream = True)
+    # t = bed_in.intersect(b_info, wa = True, wb = True, stream = True)
+    t = bed_in.intersect(b_info, loj = True, stream = True)
     try:
         with open(bed_out, 'wt') as fo:
             for b in t:

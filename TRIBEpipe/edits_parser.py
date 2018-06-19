@@ -99,8 +99,11 @@ def mpileup2acgt(pileup, quality, depth, reference, qlimit=53,
     2    1-based coordinate
     3    reference base
     4    depth
-    5    base qualities
-    6    mapping qualities
+    5    read bases
+    6    base qualities
+    7    mapping qualities
+
+    # argument pileup = column-6
     """
     nucleot_dict = {'A': 0, 'C': 0, 'G': 0, 'T': 0}
     strand_dict = {'A': 0, 'C': 0, 'G': 0, 'T': 0}
@@ -128,7 +131,7 @@ def mpileup2acgt(pileup, quality, depth, reference, qlimit=53,
                 del_ins = True
                 block['length'] += 1
                 block['seq'] = base
-            elif base == '.' or base == ',':
+            elif base == '.' or base == ',':  ## . on froward, , on reverse
                 if ord(quality[n]) >= qlimit:
                     nucleot_dict[reference] += 1
                     if base == '.':
@@ -296,9 +299,9 @@ def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna',
         return None
     # strand
     if strand == '+':
-        c1 = 'samtools view -f 16 -bhS {}'.format(bam)
+        flag = '-f 16'
     elif strand == '-':
-        c1 = 'samtools view -F 16 -bhS {}'.format(bam)
+        flag = '-F 16'
     else:
         return None
     # values
@@ -309,7 +312,7 @@ def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna',
     write_mode = 'at' if append else 'wt'
 
     # run commands
-    c1 = 'samtools view -f 16 -bhS {}'.format(bam)
+    c1 = 'samtools view {} -bhS {}'.format(flag, bam)
     c2 = 'samtools mpileup -f {} -'.format(genome_fa)
     p1 = subprocess.Popen(shlex.split(c1), stdout = subprocess.PIPE)
     p2 = subprocess.Popen(shlex.split(c2), stdin = p1.stdout, 
@@ -325,8 +328,9 @@ def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna',
             ref = ref.upper()
             depth = int(depth)
             if depth >= depth_cutoff and depth_cutoff > 0 and ref != 'N':
-                acgt_res = mpileup2acgt(pileup, quality, depth, ref, qlimit = 25, 
-                                        noend = False, nostart = False)
+                acgt_res = mpileup2acgt(pileup, quality, depth, ref, 
+                                        qlimit = 25, noend = False, 
+                                        nostart = False)
                 f_out = [chr, pos, ref, depth, acgt_res['A'], acgt_res['C'], 
                          acgt_res['G'], acgt_res['T']]
                 # filtering
@@ -346,12 +350,13 @@ def edits_parser(bam, genome_fa, outfile, snp_type, depth_cutoff, pct_cutoff,
     else:
         try:
             # forward strand    
-            snp_parser(bam, genome_fa, outfile, strand = '+', snp_type = snp_type,
-                       depth_cutoff = depth_cutoff, pct_cutoff = pct_cutoff)
+            snp_parser(bam, genome_fa, outfile, strand = '+', 
+                       snp_type = snp_type, depth_cutoff = depth_cutoff, 
+                       pct_cutoff = pct_cutoff)
             # reverse strand
-            snp_parser(bam, genome_fa, outfile, strand = '-', snp_type = snp_type,
-                       depth_cutoff = depth_cutoff, pct_cutoff = pct_cutoff, 
-                       append = True)
+            snp_parser(bam, genome_fa, outfile, strand = '-', 
+                       snp_type = snp_type, depth_cutoff = depth_cutoff, 
+                       pct_cutoff = pct_cutoff, append = True)
         except IOError:
             logging.info('fail to call edits')
     return outfile
@@ -365,14 +370,6 @@ def main():
     assert args.pct_cutoff >= 0 and args.pct_cutoff <= 100
     edits_parser(args.i.name, args.g.name, args.o, args.t, args.depth_cutoff,
                  args.pct_cutoff, overwrite = args.overwrite)
-    # # forward strand
-    # snp_parser(args.i.name, args.g.name, args.o, strand = '+', 
-    #            snp_type = args.t, depth_cutoff = args.depth_cutoff,
-    #            pct_cutoff = args.pct_cutoff)
-    # # reverse strand
-    # snp_parser(args.i.name, args.g.name, args.o, strand = '-', 
-    #            snp_type = args.t, depth_cutoff = args.depth_cutoff,
-    #            pct_cutoff = args.pct_cutoff, append = True)
 
 if __name__ == '__main__':
     main()
