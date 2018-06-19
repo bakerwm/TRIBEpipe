@@ -31,25 +31,33 @@ output:
 12      N count       
 """
 
-import os, sys, re, argparse, tempfile, logging
+import os, sys, re, argparse, logging
 import pybedtools
 
-
+logging.basicConfig(format = '[%(asctime)s] %(message)s', 
+                    datefmt = '%Y-%m-%d %H:%M:%S', 
+                    level = logging.DEBUG)
 
 def get_args():
     ## parsing arguments
     parser = argparse.ArgumentParser(
         prog = 'edits_filter', description = 'Fitering editing events',
         epilog = 'Output: ')
-    parser.add_argument('-i', required = True, metavar = 'TRIBE',
-        help = 'edit events of TRIBE sample')
-    parser.add_argument('-c', nargs = '+', required = True,  metavar = 'Control',
-        type = argparse.FileType('r'),
-        help = 'edit events of control samples, genomic DNA, wildtype mRNA, etc.')
+    parser.add_argument('-i', nargs = '+', required = True, metavar = 'TRIBE',
+        help = 'editing events of TRIBE sample')
+    parser.add_argument('-gDNA', required = True, metavar = 'genomic_DNA',
+        help = 'editing events in genomic DNA, included in results')
+    parser.add_argument('-wtRNA', required = True, metavar = 'wildtype_RNA',
+        help = 'editing events in wildtype RNA-seq, excluded from results')
+    # parser.add_argument('-c', nargs = '+', required = True,  metavar = 'Control',
+    #     type = argparse.FileType('r'),
+    #     help = 'edit events of control samples, genomic DNA, wildtype mRNA, etc.')
     parser.add_argument('-g', required = True, metavar = 'GTF',
         help = 'gene annotation in GFF format')
     parser.add_argument('-o', required = True, metavar = 'Output',
         help = 'file to save the results')
+    parser.add_argument('--remove_tmp', action = 'strore_true',
+        help = 'if specified, remove temp file, anno.bed')
     args = parser.parse_args()
     return args
 
@@ -105,7 +113,6 @@ def gtf2bed(in_gtf, out_bed, feature = True):
     convert GTF to BED
     feature: gene  transcript  CDS  exon  five_prime_utr  three_prime_utr  start_codon
     """
-    # n = 1
     groups = ['gene', 'transcript', 'CDS', 'exon', 'five_prime_utr', 
               'three_prime_utr', 'start_codon']
     try:
@@ -124,15 +131,13 @@ def gtf2bed(in_gtf, out_bed, feature = True):
                     fo.write('\t'.join(fout) + '\n')
                 else:
                     continue
-                # if n > 10: break
-                # n += 1
     except IOError:
         logging.error('fail to parse gtf and bed files')
 
 
 
 
-def bed_filter(bed_in, bed_excludes):
+def bed_filter(bed_in, bed_excludes, exclude = True):
     """
     exclude bed_exclude records from bed_in
     bed_in: BedTool
@@ -142,11 +147,14 @@ def bed_filter(bed_in, bed_excludes):
     assert isinstance(bed_excludes, list)
     if len(bed_excludes) >= 1:
         b = pybedtools.BedTool(bed_excludes.pop())
-        b2 = bed_in.intersect(b, v = True)
+        if exclude:
+            b2 = bed_in.intersect(b, v = True)
+        else:
+            b2 = bed_in.intersect(b, u = True)
         if len(bed_excludes) == 0:
             return b2
         else:
-            return bed_filter(b2, bed_excludes)
+            return bed_filter(b2, bed_excludes, exclude = exclude)
     else:
         return None
 
@@ -162,48 +170,57 @@ def bed_anno(bed_in, bed_info, bed_out):
     b_info = pybedtools.BedTool(bed_info)
     t = bed_in.intersect(b_info, wa = True, wb = True, stream = True)
     try:
+        print(bed_out)
         with open(bed_out, 'wt') as fo:
             for b in t:
                 fs = str(b).strip().split('\t')
                 fs2 =  fs[:-6] + [fs[-3]] # add feature to the end
                 fo.write('\t'.join(fs2) + '\n')
     except IOError:
-        loging.info('fail, processing BED annotation')
+        logging.info('fail, processing BED annotation')
 
 
 
-def edits_filter(edits_tribe, edits_control, gtf, edits_tribe_filt):
+def edits_filter(edits_tribe, edits_gDNA, edits_wtRNA, 
+                     gtf, edits_tribe_filt, remove_tmp = False):
     """filtering edits"""
-    # convert GTF to BED, filt feature
-    gene_bed = tempfile.NamedTemporaryFile()
-    gtf2bed(gtf, gene_bed.name, feature = 'gene')
+    assert isinstance(edits_tribe, str)
+    assert isinstance(edits_gDNA, str)
+    assert isinstance(edits_wtRNA, str)
+    gene_bed = os.path.splitext(gtf)[0] + '.bed'
+    if not os.path.exists(gene_bed):
+        gtf2bed(gtf, gene_bed, feature = 'gene')
+
+    # outdir
+    if not os.path.exists(os.path.dirname(edits_tribe_filt)):
+        os.makedirs(os.path.dirname(edits_tribe_filt))
     
-    # annotate
-    ex_files = [i.name for i in edits_control]
-    b1 = bed_filter(pybedtools.BedTool(edits_tribe), ex_files)
-    bed_anno(b1, gene_bed.name, edits_tribe_filt)
+    # include gDNA
+    b1 = bed_filter(pybedtools.BedTool(edits_tribe), [edits_gDNA, ], exclude = False)
+
+    # exclude wtRNA
+    b2 = bed_filter(b1, [edits_wtRNA, ], exclude = True)
+
+    # annotation
+    bed_anno(b2, gene_bed, edits_tribe_filt)
 
     # remove temp files
-    os.remove(gene_bed.name)
+    if remove_tmp:
+        os.remove(gene_bed)
 
     return edits_tribe_filt
 
 
 def main():
     args = get_args()
-    edits_filter(args.i, args.c, args.g, args.o)
-    # # convert GTF to BED, filt feature
-    # gene_bed = tempfile.NamedTemporaryFile()
-    # gtf2bed(args.g, gene_bed.name, feature = 'gene')
-    # # gene_bed = 'Drosophila_melanogaster.BDGP6.92.bed'
-
-    # # annotate
-    # ex_files = [i.name for i in args.c]
-    # b1 = bed_filter(pybedtools.BedTool(args.i), ex_files)
-    # bed_anno(b1, gene_bed.name, args.o)
-
-    # # remove temp files
-    # os.remove(gene_bed.name)
+    edits_tribe = [i.name for i in args.i]
+    # edits_control = [i.name for i in args.c]
+    edits_gDNA = args.gDNA
+    edits_wtRNA = args.wtRNA
+    # edits_filter(edits_tribe, edits_control, args.g, args.o, args.remove_tmp)
+    for i in args.i:
+        edits_filter(i.name, edits_gDNA, edits_wtRNA, args.g,
+                     args.o, args.remove_tmp)
 
 
 if __name__ == '__main__':
