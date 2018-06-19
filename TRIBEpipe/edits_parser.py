@@ -76,6 +76,8 @@ def get_args():
     parser.add_argument('--pct_cutoff', default = 10, type = int,
         metavar = 'percentage',
         help = 'minimum editing percentage [1-100]%%, default: 10')
+    parser.add_argument('--overwrite', action = 'store_true',
+        help = 'if specified, overwrite existing file')
     args = parser.parse_args()
     return args
 
@@ -336,17 +338,21 @@ def snp_parser(bam, genome, out_file, strand = '+', snp_type = 'rna',
 
 
 
-def edits_parser(bam, genome, outfile, snp_type, depth_cutoff, pct_cutoff):
-    try:
-        # forward strand    
-        snp_parser(bam, genome, outfile, strand = '+', snp_type = snp_type, 
-                   depth_cutoff = depth_cutoff, pct_cutoff = pct_cutoff)
-        # reverse strand
-        snp_parser(bam, genome, outfile, strand = '-', snp_type = snp_type, 
-                   depth_cutoff = depth_cutoff, pct_cutoff = pct_cutoff, 
-                   append = True)
-    except IOError:
-        logging.info('fail to call edits')
+def edits_parser(bam, genome, outfile, snp_type, depth_cutoff, pct_cutoff,
+                 overwrite = False):
+    if os.path.exists(outfile) and overwrite is False:
+        logging.info('edits file exists, skipping: ' + outfile)
+    else:
+        try:
+            # forward strand    
+            snp_parser(bam, genome, outfile, strand = '+', snp_type = snp_type,
+                       depth_cutoff = depth_cutoff, pct_cutoff = pct_cutoff)
+            # reverse strand
+            snp_parser(bam, genome, outfile, strand = '-', snp_type = snp_type,
+                       depth_cutoff = depth_cutoff, pct_cutoff = pct_cutoff, 
+                       append = True)
+        except IOError:
+            logging.info('fail to call edits')
     return outfile
 
 
@@ -358,7 +364,7 @@ def main():
     assert args.depth_cutoff > 0
     assert args.pct_cutoff >= 0 and args.pct_cutoff <= 100
     edits_parser(args.i.name, args.g.name, args.o, args.t, args.depth_cutoff,
-                 args.pct_cutoff)
+                 args.pct_cutoff, overwrite = args.overwrite)
     # # forward strand
     # snp_parser(args.i.name, args.g.name, args.o, strand = '+', 
     #            snp_type = args.t, depth_cutoff = args.depth_cutoff,
