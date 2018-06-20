@@ -8,10 +8,9 @@ TRIBEpipe documentation
 
 About TRIBEpipe
 ----------------
-TRIBEpipe is a pipeline for analyzing TRIBE datasets.
+TRIBEpipe is a pipeline for analyzing HyperTRIBE datasets, to identify targets of RNA binding protein.
 
-TRIBE_ [#]_ (HyperTRIBE_ is an imporved version [#]_) is a technique used for the identification of the targets of RNA binding proteins (RBP) in vivo. TRIBE couples an RBP to the catalytic domain of the Drosophila RNA editing enzyme ADAR (ADARcd, catalytic domain) and expresses the fusion protein in vivo. When the fusion protein binds to its target, ADARcd will introduce novel RNA editing events which could be identified by RNA-seq.
-
+HyperTRIBE_ [#]_ , an improved version of TRIBE_ [#]_, is a technique used for the identification of the targets of RNA binding proteins (RBP) in vivo. HyperTRIBE couples an RBP to the catalytic domain of the Drosophila RNA editing enzyme ADAR (ADARcd, catalytic domain) and expresses the fusion protein in vivo. When the fusion protein binds to its target, ADARcd will introduce novel RNA editing events which could be identified by RNA-seq.
 
 .. _TRIBE: https://github.com/rosbashlab/TRIBE  
 .. _HyperTRIBE: https://github.com/rosbashlab/HyperTRIBE
