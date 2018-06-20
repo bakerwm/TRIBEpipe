@@ -83,10 +83,11 @@ def get_args():
 
 
 
-def mpileup2acgt(pileup, quality, depth, reference, qlimit=53,
-         noend=False, nostart=False):
+def mpileup2acgt(pileup, quality, depth, reference, qlimit = 53,
+                 noend = False, nostart = False):
     """
-    This function was adopted from: sequenza-utils pileup2acgt 
+    This function was written by Francesco Favero, 
+    from: sequenza-utils pileup2acgt 
     URL: https://bitbucket.org/sequenza_tools/sequenza-utils
     original code were protected under GPLv3 license.
 
@@ -219,6 +220,12 @@ def rna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
     freqC = int(float(numC) / float(numTotal) * 100)
     freqG = int(float(numG) / float(numTotal) * 100)
     freqT = int(float(numT) / float(numTotal) * 100)
+    # refbase = fs[2]
+    # numTotal, numA, numC, numG, numT = list(map(fs[3:8], float))
+    # freqA = numA / numTotal * 100
+    # freqC = numC / numTotal * 100
+    # freqG = numG / numTotal * 100
+    # freqT = numT / numTotal * 100
     freqHit = 0
     if strand == "-":
         freqHit = freqC
