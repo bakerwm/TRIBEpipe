@@ -146,11 +146,16 @@ The directory structure of ``results`` should like this:
 
 
 
-There are three folders under ``resutls``, **gDNA**, **TRIBE** and **wt_RNA**. 
+There are three folders within ``resutls``: ``gDNA``, ``TRIBE`` and ``wt_RNA``.
+
+
 within each folder, there are three folders:
-- input_reads : save the clean reads and *.json statistics file
-- mapping : save the *.bam files and *.csv statistics file
-- edits: save the *.bedgraph file, not filtered editing events
+
+- ``input_reads`` : save the clean reads and \*.json statistics file 
+
+- ``mapping`` : save the \*.bam files and \*.csv statistics file  
+
+- ``edits``: save the \*.bedgraph file, not filtered editing events  
 
 The finall results were saved in ``results/TRIBE/edits_filted`` in **BedGraph** format.
 
