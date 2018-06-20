@@ -11,7 +11,7 @@ Here will explain the procedures of TRIBEpipe:
 
 
 Trimming
-----------
+--------
 
 Trim 3' adapter ``-a`` and low-quality bases ``-q 20``, cut 7-nt at 5' end (NSR library).
 
@@ -33,9 +33,11 @@ Trim 3' adapter ``-a`` and low-quality bases ``-q 20``, cut 7-nt at 5' end (NSR 
 
 
 Mapping
----------
+-------
 
-Mapping reads to reference genome with STAR
+Mapping reads to reference genome with STAR.
+
+PCR duplicates were not removed for editing analysis.
 
 ::
 
@@ -55,13 +57,13 @@ Mapping reads to reference genome with STAR
 
 
 Extract editing events
------------------------
+----------------------
 
 Extract the nucleotide frequencies at each position on chromosome with ``samtools mpileup``
 
-::
-
-	# forward strand
+:: 
+  
+    # forward strand
 	$ samtools view -f 16 -bhS in.bam | \
 		samtools mpileup -f dm6.fa - > out_fwd.mpileup
 
@@ -92,3 +94,70 @@ Extract the nucleotide frequencies at each position on chromosome with ``samtool
 
 
 Find more about ``mpileup`` at http://samtools.sourceforge.net/pileup.shtml and https://davetang.org/muse/2015/08/26/samtools-mpileup/ 
+
+Converting mpileup to base frequency at each position
+
+using the Python script: ``pileup2acgt`` from ``sequenza-utils`` (source_).
+
+.. _source: https://bitbucket.org/sequenza_tools/sequenza-utils
+
+The output looks like this:
+
+::
+
+    chr     n_base  ref_base        read.depth      A       C       G       T       strand
+    chr2L   10598   A       1       1       0       0       0       0:0:0:0
+    chr2L   10599   A       1       1       0       0       0       0:0:0:0
+    chr2L   10600   T       1       0       0       0       1       0:0:0:0
+    chr2L   10601   C       1       0       1       0       0       0:0:0:0
+
+**TRIBE** 
+
+- Forward strand, ref_base = A, G% >= 10%, read.depth >= 20  
+
+- Reverse strand, ref_base = T, C% >= 10%, read.depth >= 20  
+
+**gDNA**
+
+- Forward strand, ref_base = A, A% >= 80%, G% == 0%
+
+- Reverse strand, ref_base = T, T% >= 80%, C% == 0%
+
+**wtRNA**
+
+- Forward strand, ref_base = A, G% >= 10%, read.depth >= 10  
+
+- Reverse strand, ref_base = T, C% >= 10%, read.depth >= 10  
+
+
+Filtering
+----------
+
+Overall, A > 80% and G = 0 in gDNA, G > 0% in RNA
+
++ S2 cell
+
+20 reads and 10% editing
+
++ In neurons 
+
+remove endogenous editing events: 10 reads, 10% editing
+
+A lower threshold (10 reads, 10% editing) was used to define endogenous editign events.
+
+All endogenous editing events detected were excluded from downstream analysis of TRIBE-expressing neurons.
+
+
+.. note::
+
+    HyperTRIBE is an improved version of TRIBE,
+
+    Criteria:
+
+    1. >= 20 reads in each replicate 
+    2. in gDNA, A >= 80%, G = 0  
+    3. A >= 10% in mRNA (editing)
+
+Append the gene name to the editing record.
+
+

@@ -26,6 +26,7 @@ TRIBE_ [#]_ (HyperTRIBE_ is an imporved version [#]_) is a technique used for th
 
    Installation
    Tutorial
+   Procedures
 
 
 Indices and tables
