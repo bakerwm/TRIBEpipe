@@ -188,9 +188,9 @@ def trim(fqs, adapter3, out_path, len_min = 15, qual_min = 20, cut = 0,
         q_prefix = re.sub(r'.f[ast]*q(.gz)?', '', os.path.basename(fq))
         q_out = os.path.join(out_path, q_prefix + '.clean')
         if abs(cut) > 0:
-            q_out += '.cut' + str(cut) + '.fastq'
+            q_out += '.cut' + str(cut) + '.fq'
         else:
-            q_out += '.fastq'
+            q_out += '.fq'
         if os.path.isfile(q_out) and not overwrite:
             fq_out.append(q_out)
             logging.info('file exists, trimming skipped...' + q_out)
