@@ -217,7 +217,7 @@ def main():
     p = trim(fqs = [f.name for f in args.i], adapter3 = args.a, 
         out_path = args.o, len_min = args.m, qual_min = args.q, cut = args.cut,
         err_rate = args.e, multi_cores = args.threads, overlap = args.O)
-
+    
 
 if __name__ ==  '__main__':
     main()
