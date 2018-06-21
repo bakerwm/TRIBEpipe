@@ -72,18 +72,18 @@ def get_args():
     parser.add_argument('--tribe_pct_cutoff', default = 10, type = int,
         metavar = 'percentage',
         help = 'minimum editing percentage [1-100]%% for tribe samples, default: 10')
-    parser.add_argument('--gDNA_depth_cutoff', default = 10, type = int, 
+    parser.add_argument('--gDNA_depth_cutoff', default = 1, type = int, 
         metavar = 'gDNA_depth',
         help = 'minimum read depth at editing position for genomic DNA samples, default: 10')
     parser.add_argument('--gDNA_pct_cutoff', default = 80, type = int,
         metavar = 'percentage',
         help = 'minimum percentage [1-100]%% of reference base, default: 80')
-    parser.add_argument('--wtRNA_pct_cutoff', default = 10, type = int,
-        metavar = 'percentage',
-        help = 'minimum editing percentage [1-100]%% for wtRNA samples, default: 10')
     parser.add_argument('--wtRNA_depth_cutoff', default = 10, type = int, 
         metavar = 'wtRNA_depth',
         help = 'minimum read depth at editing position for wtRNA samples, default: 10')
+    parser.add_argument('--wtRNA_pct_cutoff', default = 10, type = int,
+        metavar = 'percentage',
+        help = 'minimum editing percentage [1-100]%% for wtRNA samples, default: 10')    
     parser.add_argument('-a', metavar = 'adapter', default = None,
         help = 'adapter sequences at 3-prime end, default: TruSeq')
     parser.add_argument('-m', metavar = 'min_length', type = int, default = 19,
@@ -106,8 +106,11 @@ def tribe_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut,
     ## Trimming
     tribe_trim_dir = os.path.join(outdir, 'input_reads')
     tribe_clean_fq = trim.trim(fqs = fqs, adapter3 = ad3,
-                               out_path = tribe_trim_dir, len_min = len_min, 
-                               cut = cut, multi_cores = threads)
+                               out_path = tribe_trim_dir, 
+                               len_min = len_min, 
+                               cut = cut, 
+                               multi_cores = threads,
+                               overwrite = False)
 
     ## Mapping
     tribe_map_dir = os.path.join(outdir, 'mapping')
@@ -137,10 +140,14 @@ def gDNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut,
     """extract editing events from genomic DNA-seq sample"""
     ## Trimming
     gDNA_trim_dir = os.path.join(outdir, 'input_reads')
-    gDNA_clean_fq = trim.trim(fqs = [fq], adapter3 = ad3,
-                              out_path = gDNA_trim_dir, len_min = len_min, 
-                              cut = cut, multi_cores = threads)
-    
+    gDNA_clean_fq = trim.trim(fqs = [fq], 
+                              adapter3 = ad3,
+                              out_path = gDNA_trim_dir, 
+                              len_min = len_min, 
+                              cut = cut, 
+                              multi_cores = threads,
+                              overwrite = False)
+
     ## Mapping
     gDNA_map_dir = os.path.join(outdir, 'mapping')
     gDNA_map_bam = map.map([gDNA_clean_fq[0]], 'demo', gDNA_map_dir,
@@ -163,9 +170,13 @@ def wtRNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut,
     """extract editing events from genomic DNA-seq sample"""
     ## Trimming
     wtRNA_trim_dir = os.path.join(outdir, 'input_reads')
-    wtRNA_clean_fq = trim.trim(fqs = [fq], adapter3 = ad3,
-                              out_path = wtRNA_trim_dir, len_min = len_min, 
-                              cut = cut, multi_cores = threads)
+    wtRNA_clean_fq = trim.trim(fqs = [fq], 
+                               adapter3 = ad3,
+                               out_path = wtRNA_trim_dir, 
+                               len_min = len_min, 
+                               cut = cut, 
+                               multi_cores = threads,
+                               overwrite = False)
     
     ## Mapping
     wtRNA_map_dir = os.path.join(outdir, 'mapping')
