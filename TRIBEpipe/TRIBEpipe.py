@@ -74,7 +74,7 @@ def get_args():
         help = 'minimum editing percentage [1-100]%% for tribe samples, default: 10')
     parser.add_argument('--gDNA_depth_cutoff', default = 1, type = int, 
         metavar = 'gDNA_depth',
-        help = 'minimum read depth at editing position for genomic DNA samples, default: 10')
+        help = 'minimum read depth at editing position for genomic DNA samples, default: 1')
     parser.add_argument('--gDNA_pct_cutoff', default = 80, type = int,
         metavar = 'percentage',
         help = 'minimum percentage [1-100]%% of reference base, default: 80')
