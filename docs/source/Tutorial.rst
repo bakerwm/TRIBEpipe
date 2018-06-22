@@ -1,9 +1,12 @@
+.. _tutorial:
+
+
 Tutorial
 =========
 
-You will need to install ``TRIBEpipe`` first. 
+Before we go through the tutorial, I suppose ``TRIBEpipe`` was installed on your machine. If not, go to :ref:`installation` for more details.
 
-``TRIBEpipe`` will process RNA-seq data of TRIBE experiments with one command line:
+``TRIBEpipe`` works like this with default parameters:
 
 ::
 
@@ -42,44 +45,50 @@ for example, download files for ``dm6``:
 .. _ensembl: http://asia.ensembl.org/info/data/ftp/index.html
 
 
+Preparing sequencing data
+---------------------------
 
-Preparing RNA-seq data
------------------------
+``TRIBEpipe`` requires **three** types of sequencing datasets:
 
-A standard ``TRIBE`` would contains multiple experiment samples: **TRIBE**, one genomic DNA-seq sample, **gDNA** and one wildtype RNA-seq sample, **wtRNA**.
+- gDNA: genomic DNA sequencing 
 
-``TRIBE`` RNA editing (A to I (G)) events were defined by the following rules:
+- wtRNA: wild type RNA-seq data
 
-In **TRIBE** samples:  
+- tribe: TRIBE RNA-seq data
 
-- read depth >= 20  
-- editing percentage >= 10%  
+Currently, only single-end (SE) reads supported.
 
-In **gDNA** sample:  
-
-- editing percentage = 0% (A to G)  
-- A percentage >= 80%  
-
-In **wtRNA** sample:  
-
-- read depth >= 10  
-- editing percentage >= 10%  
-
-**TRIBE** sites = (TRIBE & gDNA) not wtRNA
-
-Currently, only single-end (SE) reads supported (for dUTP strand-specific RNA-seq, using read2 of PE reads)
+If you have paired-end sequencing reads, you can choose the read represent the sense strand of RNA to ``TRIBEpipe``. For example, read2 of dUTP strand-specific RNA-seq.
 
 
-Run demo data
---------------
+Running demo data
+------------------
 
-Download the demo data from the following link: ftp://demo.tar.gz
+Download the demo data from the following link: ftp://demo.tar.gz. 
 
 :: 
-
+    # demo data
     $ wget ftp://demo.tar.gz
     $ tar zxvf demo.tar.gz
     $ cd demo
+
+Or, you can download the Hrp48 HyperTRIBE data from GEO with the following accession number:
+(~ 7 GB to download in SRA format), see `Xu et al., RNA, 2018`_ for details.
+
+.. _`Xu et al., RNA, 2018`: http://rnajournal.cshlp.org/content/24/2/173.long
+
+::
+
+    # HyperTRIBE data 
+    SRR5944748 GSM2746730 Hrp48_HyperTRIBE_s2_rep1
+    SRR5944749 GSM2746731 Hrp48_HyperTRIBE_s2_rep2
+    SRR6426146 GSM2905815 s2_wt_mRNA
+    SRR3177714 GSM2065948 s2_gDNA
+
+The following tutorial using the **demo** data
+
+:: 
+
     $ TRIBEpipe -i tribe_rep1.fastq tribe_rep2.fastq \
                 -gDNA gDNA.fastq \
                 -wtRNA wtmRNA.fastq \
@@ -90,7 +99,7 @@ Download the demo data from the following link: ftp://demo.tar.gz
 
 The RNA-seq libraries were constructed using NSR methods (REF [#]_), we will cut the fist 7 nucleutides, ``--cut=7``. and saving output in ``results`` directory.
 
-.. [#] NAR reference
+.. [#] NSR reference
 
 The directory structure of ``results`` should like this:
 
@@ -145,11 +154,10 @@ The directory structure of ``results`` should like this:
             └── wtRNA.mapping_stat.csv
 
 
-
 There are three folders within ``resutls``: ``gDNA``, ``TRIBE`` and ``wt_RNA``.
 
 
-within each folder, there are three folders:
+within each folder, there are three sub-folders:
 
 - ``input_reads`` : save the clean reads and \*.json statistics file 
 
@@ -161,12 +169,12 @@ The finall results were saved in ``results/TRIBE/edits_filted`` in **BedGraph** 
 
 
 
-Format of editing events
--------------------------
+About results
+---------------
 
-Editing events were saved in **BedGraph** format;
+Editing events were saved in **BedGraph** format in ``results/TRIBE/edits_filter/``
 
-Non-filtered events is a 12-column file in BedGraph format
+Before filter, editing events is a 12-column file in BedGraph format
 
 ::
 
@@ -198,16 +206,16 @@ Non-filtered events is a 12-column file in BedGraph format
     12          N count
 
 
-Filtered events contains one extra column for the **gene** information
+After filter, editing events contains one extra column for the **gene** information
 
 
-For multiple TRIBE datasets
------------------------------
+Running your data
+-------------------
 
 If your project contains mulitple TRIBE RNA-seq datasets while sharing the same group of **gDNA** and **wtRNA** samples, you could run the command like this:
 
 
-Option1. Run all the TRIBE RNA-seq datasets in one command:
+**Option1.** Run all the TRIBE RNA-seq datasets in one command:
 
 ::
     
@@ -220,7 +228,7 @@ Option1. Run all the TRIBE RNA-seq datasets in one command:
                 --threads 8
 
 
-Option2. Run different TRIBE datasets separately
+**Option2.** Run different TRIBE datasets separately
 
 Make sure you are using the same folder each time, eg: ``results``
 

@@ -26,6 +26,7 @@ HyperTRIBE_ [#]_ , an improved version of TRIBE_ [#]_, is a technique used for t
    Installation
    Tutorial
    Procedures
+   Reading_paper
 
 
 Indices and tables
