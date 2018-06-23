@@ -294,13 +294,6 @@ def dna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = None):
         elif refbase == 'T' and fT >= pct_cutoff and fC == 0:
             fHit = fT
         else:
-            fHit = int(fA)
-            ## for BED3 format
-            start = int(fs[1]) - 1
-            name = fs[0] + '_' + fs[1] + '_{}_{}%'.format(int(nTotal), int(fHit))
-            f_out = [fs[0], start, fs[1], fHit, name, fs[2]] + fs[3:8] + [str(nN)]
-            # return list(map(str, f_out))
-            print('\t'.join(list(map(str, f_out))))
             return None
     ## for BED3 format
     start = int(fs[1]) - 1
