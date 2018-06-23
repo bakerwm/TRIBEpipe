@@ -220,12 +220,12 @@ def rna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
     nTotal, nA, nC, nG, nT = list(map(float, fs[3:8]))
     nN = int(nTotal - nA - nC - nG - nT)
     nTotal = nA + nC + nG + nT
+    if nTotal == 0:
+        return None
     fA = nA / nTotal * 100
     fC = nC / nTotal * 100
     fG = nG / nTotal * 100
     fT = nT / nTotal * 100
-    if nTotal == 0:
-        return None
     fHit = 0
     if strand == '-':
         if refbase == 'T' and fC >= pct_cutoff and nTotal >= depth_cutoff:
