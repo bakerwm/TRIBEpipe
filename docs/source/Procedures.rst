@@ -5,6 +5,16 @@ Procedures
 ===========
 
 
+.. note::
+
+  filtering snps by:
+
+  1. not within the first or last 6 bases of read
+
+
+
+
+
 Here will explain the procedures of TRIBEpipe:
 
 - Trimming, using cutadapt to trim adapter and low quality bases 

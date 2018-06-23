@@ -5,6 +5,79 @@ Reading paper
 ==============
 
 
+FAQ: samtools mpileup output
+------------------------------
+
+Question: In some case, the depth calculated by the ``samtools mpileup`` is lower than ``bedtools genomecov -bz``, what's the reason?
+
+Answer-1: There are some default filtering steps in samtools:
+
+- Samtools mpileup will ignore bases with Q < 13
+
+Use ``-Q 0`` to suppress the filtering
+
+see: 
+
+https://www.biostars.org/p/60841/#86579, 
+
+https://www.biostars.org/p/60841/#60847
+
+https://www.biostars.org/p/67579/#67791
+
+- Samtools mpileup will remove duplicates or secondary reads:
+
+Use ``--ff 4`` to request ONLY filtering of unmapped reads
+
+https://github.com/samtools/samtools/issues/408
+
+
+Question: What is the mean of characters in column-5 of ``samtools mpileup``
+
+see samtools_ and wiki_  https://en.wikipedia.org/wiki/Pileup_format
+
+.. _samtools: http://samtools.sourceforge.net/pileup.shtml
+
+.. _wiki: https://en.wikipedia.org/wiki/Pileup_format
+
+
+chr4    15685   a       28      >>>>>>>>..>...............>>    IJ:C<JCJJJJJJJGJIJIJ9JHIJJJJ    "!!!"~~!!!!!!!!!!!!!!!!!!!!!
+
+from Wikipedia
+
+	The columns
+	Each line consists of 5 (or optionally 6) tab-separated columns:
+
+	- 1 Sequence identifier  
+	- 2 Position in sequence (starting from 1)  
+	- 3 Reference nucleotide at that position  
+	- 4 Number of aligned reads covering that position (depth of coverage)  
+	- 5 Bases at that position from aligned reads  
+	- 6 quality of those bases (OPTIONAL)  
+
+	Column 5: The bases string
+
+	- . (dot) means a base that matched the reference on the forward strand
+	- , (comma) means a base that matched the reference on the reverse strand
+	- </> (less-/greater-than sign) denotes a reference skip. This occurs, for example, if a base in the reference genome is intronic and a read maps to two flanking exons. If quality scores are given in a sixth column, they refer to the quality of the read and not the specific base.
+	- AGTCN denotes a base that did not match the reference on the forward strand
+	- agtcn denotes a base that did not match the reference on the reverse strand
+	- A sequence matching the regular expression \+[0-9]+[ACGTNacgtn]+ denotes an insertion of one or more bases starting from the next position
+	- A sequence matching the regular expression -[0-9]+[ACGTNacgtn]+ denotes a deletion of one or more bases starting from the next position
+	- ^ (caret) marks the start of a read segment and the ASCII of the character following `^' minus 33 gives the mapping quality
+	- $ (dollar) marks the end of a read segment
+	- * (asterisk) is a placeholder for a deleted base in a multiple basepair deletion that was mentioned in a previous line by the -[0-9]+[ACGTNacgtn]+ notation
+	
+	Column 6: The base quality string
+
+	This is an optional column. If present, the ASCII value of the character minus 33 gives the mapping Phred quality of each of the bases in the previous column 5. This is similar to quality encoding in the FASTQ format.
+
+
+
+from SAMTools:
+
+	where each line consists of chromosome, 1-based coordinate, reference base, the number of reads covering the site, read bases and base qualities. At the read base column, a dot stands for a match to the reference base on the forward strand, a comma for a match on the reverse strand, `ACGTN' for a mismatch on the forward strand and `acgtn' for a mismatch on the reverse strand. A pattern `\+[0-9]+[ACGTNacgtn]+' indicates there is an insertion between this reference position and the next reference position. The length of the insertion is given by the integer in the pattern, followed by the inserted sequence. Here is an example of 2bp insertions on three reads:
+
+
 
 
 Databases for RNA editing
