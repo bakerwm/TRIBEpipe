@@ -1,5 +1,15 @@
-Procedures
-===========
+.. _procedures:
+
+
+How-To
+=======
+
+
+.. note::
+
+  filtering snps by:
+
+  1. not within the first or last 6 bases of read
 
 
 Here will explain the procedures of TRIBEpipe:
@@ -133,6 +143,7 @@ The output looks like this:
 Filtering
 ----------
 
+
 Final results = (TRIBE intersect gDNA) exclude wtRNA
 
 
@@ -165,8 +176,24 @@ Append the gene name to the editing record.
 
 
 
+``TRIBE`` RNA editing (A to I (G)) events were defined by the following rules:
 
-    
+In **TRIBE** samples:  
+
+- read depth >= 20  
+- editing percentage >= 10%  
+
+In **gDNA** sample:  
+
+- editing percentage = 0% (A to G)  
+- A percentage >= 80%  
+
+In **wtRNA** sample:  
+
+- read depth >= 10  
+- editing percentage >= 10%  
+
+**TRIBE** sites = (TRIBE & gDNA) not wtRNA
 
 
 
