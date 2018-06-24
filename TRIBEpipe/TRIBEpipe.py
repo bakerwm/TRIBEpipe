@@ -28,7 +28,7 @@ pipeline
 2.2 samtools mpileup: filt and extract nucleotide content at each position
 2.3 convert mpileup to BED format
 2.4 filter positions
-3 filt TRIBE records by controls, gDNA, wt_RNA
+3 filt TRIBE records by controls, gDNA, wtRNA
 
 Compute each sample respectively:
 TRIBE - gDNA - wt_mRNA = sites
@@ -222,7 +222,7 @@ def main():
     genome_fa, genome_gtf, genome_index = genome_parser(args.g, args.genome_data)
 
     ## prepare dir
-    subdirs = [os.path.join(args.o, i) for i in ['TRIBE', 'gDNA', 'wt_RNA']]
+    subdirs = [os.path.join(args.o, i) for i in ['TRIBE', 'gDNA', 'wtRNA']]
 
     ## extract edits
     logging.info('step 1. processing TRIBE samples')
