@@ -196,6 +196,7 @@ def mpileup2acgt(pileup, quality, depth, reference, qlimit = 53,
     return nucleot_dict
 
 
+
 def rna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
     """
     filt bases: count>depth_cutoff, pct>pct_cutoff
@@ -214,38 +215,47 @@ def rna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
     7       G
     8       T
     """
-    refbase, numTotal, numA, numC, numG, numT = fs[2:8]
-    numN = int(numTotal) - int(numA) - int(numC) - int(numG) - int(numT)
-    freqA = int(float(numA) / float(numTotal) * 100)
-    freqC = int(float(numC) / float(numTotal) * 100)
-    freqG = int(float(numG) / float(numTotal) * 100)
-    freqT = int(float(numT) / float(numTotal) * 100)
-    # refbase = fs[2]
-    # numTotal, numA, numC, numG, numT = list(map(fs[3:8], float))
-    # freqA = numA / numTotal * 100
-    # freqC = numC / numTotal * 100
-    # freqG = numG / numTotal * 100
-    # freqT = numT / numTotal * 100
-    freqHit = 0
-    if strand == "-":
-        freqHit = freqC
-        if not refbase == "T" or freqC < pct_cutoff or int(numTotal) < depth_cutoff:
+    assert isinstance(fs, list)
+    refbase = fs[2]
+    nTotal, nA, nC, nG, nT = list(map(float, fs[3:8]))
+    nN = int(nTotal - nA - nC - nG - nT)
+    nTotal = nA + nC + nG + nT
+    if nTotal == 0:
+        return None
+    fA = nA / nTotal * 100
+    fC = nC / nTotal * 100
+    fG = nG / nTotal * 100
+    fT = nT / nTotal * 100
+    fHit = 0
+    if strand == '-':
+        if refbase == 'T' and fC >= pct_cutoff and nTotal >= depth_cutoff:
+            fHit = fC
+        else:
             return None
     else:
-        freqHit = freqG
-        if not refbase == "A" or freqG < pct_cutoff or int(numTotal) < depth_cutoff:
+    # elif strand == '+':
+        if refbase == 'A' and fG >= pct_cutoff and nTotal >= depth_cutoff:
+            fHit = fG
+        else:
             return None
-    # BED output
+    ## for BED3 format
     start = int(fs[1]) - 1
-    name = fs[0] + '_' + fs[1] + '_{}_{}%'.format(numTotal, freqHit)
-    f_out = [fs[0], start, fs[1], freqHit, name, fs[2]] + fs[3:8] + [str(numN)]
-    f_out = list(map(str, f_out))
-    return f_out
+    name = fs[0] + '_' + fs[1] + '_{}_{}%'.format(int(nTotal), int(fHit))
+    # f_out = [fs[0], start, fs[1], fHit, name, fs[2]] + fs[3:8] + [str(nN)]
+    f_out = [fs[0], start, fs[1], fHit, name, fs[2], nTotal] + fs[4:8] + [str(nN)]
+    return list(map(str, f_out))
 
 
-def dna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
+
+def dna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = None):
     """
-    filt bases: freqA > 80%, freqG = 0
+    DNA-sequencing, non-strand-specific
+    forward strand:
+        refbase = A: freqA > 80%, freqG = 0
+        refbase = T: freqT > 80%, freqC = 0
+    reverse strand:
+        refbase = A: freqT > 80%, freqC = 0
+        refbase = T: freqA > 80%, freqG = 0
     fit: samtools pileup output
     chr n_base ref_base read.depth A C G T strand
 
@@ -261,27 +271,39 @@ def dna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
     7       G
     8       T
     """
-    refbase, numTotal, numA, numC, numG, numT = fs[2:8]
-    numN = int(numTotal) - int(numA) - int(numC) - int(numG) - int(numT)
-    freqA = int(float(numA) / float(numTotal) * 100)
-    freqC = int(float(numC) / float(numTotal) * 100)
-    freqG = int(float(numG) / float(numTotal) * 100)
-    freqT = int(float(numT) / float(numTotal) * 100)
-    freqHit = 0
-    if strand == "-":
-        freqHit = freqT
-        if not refbase == "T" or freqT < pct_cutoff or freqC > 0:
+    assert isinstance(fs, list)
+    refbase = fs[2]
+    nTotal, nA, nC, nG, nT = list(map(float, fs[3:8]))
+    nN = int(nTotal - nA - nC - nG - nT)
+    nTotal = nA + nC + nG + nT
+    if nTotal == 0:
+        return None
+    fA = nA / nTotal * 100
+    fC = nC / nTotal * 100
+    fG = nG / nTotal * 100
+    fT = nT / nTotal * 100
+    fHit = None
+    if strand == '-':
+        if refbase == 'A' and fT >= pct_cutoff and fC == 0:
+            fHit = fT
+        elif refbase == 'T' and fA >= pct_cutoff and fG == 0:
+            fHit = fA
+        else:
+            # print(fs)
             return None
     else:
-        freqHit = freqA
-        if not refbase == "A" or freqA < pct_cutoff or freqG > 0:
+        if refbase == 'A' and fA >= pct_cutoff and fG == 0:
+            fHit = fA
+        elif refbase == 'T' and fT >= pct_cutoff and fC == 0:
+            fHit = fT
+        else:
             return None
-    # BED output
+    ## for BED3 format
     start = int(fs[1]) - 1
-    name = fs[0] + '_' + fs[1] + '_{}_{}%'.format(numTotal, freqHit)
-    f_out = [fs[0], start, fs[1], freqHit, name, fs[2]] + fs[3:8] + [str(numN)]
-    f_out = list(map(str, f_out))
-    return f_out
+    name = fs[0] + '_' + fs[1] + '_{}_{}%'.format(int(nTotal), int(fHit))
+    f_out = [fs[0], start, fs[1], fHit, name, fs[2], nTotal] + fs[4:8] + [str(nN)]
+    return list(map(str, f_out))
+
 
 
 def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna', 
@@ -306,11 +328,11 @@ def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna',
         return None
     # strand
     if strand == '+':
-        flag = '-f 16'
-    elif strand == '-':
         flag = '-F 16'
+    elif strand == '-':
+        flag = '-f 16'
     else:
-        return None
+        flag = '-F 4' # mapped reads, for non-strand-specific BAM
     # values
     assert isinstance(depth_cutoff, int) and depth_cutoff > 0
     assert isinstance(pct_cutoff, int) and pct_cutoff >= 0 and pct_cutoff <= 100
@@ -320,31 +342,32 @@ def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna',
 
     # run commands
     c1 = 'samtools view {} -bhS {}'.format(flag, bam)
-    c2 = 'samtools mpileup -f {} -'.format(genome_fa)
+    c2 = 'samtools mpileup -d 100000 -AB --ff 4 -q 0 -Q 0 -s -f {} -'.format(genome_fa)
     p1 = subprocess.Popen(shlex.split(c1), stdout = subprocess.PIPE)
     p2 = subprocess.Popen(shlex.split(c2), stdin = p1.stdout, 
                           stdout = subprocess.PIPE, stderr = subprocess.PIPE, 
                           universal_newlines = True)
-    
     # parsing output
     with open(out_file, write_mode) as fo:
         while True:
             line = p2.stdout.readline().strip()
             if not line: break
-            chr, pos, ref, depth, pileup, quality = line.strip().split('\t')
-            ref = ref.upper()
+            # fo.write(line + '\n')
+            chr, pos, refbase, depth, pileup, quality, map_quality = line.strip().split('\t')
+            refbase = refbase.upper()
             depth = int(depth)
-            if depth >= depth_cutoff and depth_cutoff > 0 and ref != 'N':
-                acgt_res = mpileup2acgt(pileup, quality, depth, ref, 
-                                        qlimit = 25, noend = False, 
-                                        nostart = False)
-                f_out = [chr, pos, ref, depth, acgt_res['A'], acgt_res['C'], 
-                         acgt_res['G'], acgt_res['T']]
-                # filtering
-                f_out2 = snp_filter(f_out, depth_cutoff, pct_cutoff, 
-                                    strand = strand)
-                if not f_out2 is None:
-                    fo.write('\t'.join(list(map(str, f_out2))) + '\n')
+            if refbase == 'A' or refbase == 'T':
+                if depth >= depth_cutoff and depth_cutoff > 0:
+                    acgt_res = mpileup2acgt(pileup, quality, depth, refbase, 
+                                            qlimit = 25, noend = False, 
+                                            nostart = False)
+                    f_out = [chr, pos, refbase, depth, acgt_res['A'], acgt_res['C'], 
+                             acgt_res['G'], acgt_res['T']]
+                    # filtering
+                    f_out2 = snp_filter(f_out, depth_cutoff, pct_cutoff, 
+                                        strand = strand)
+                    if not f_out2 is None:
+                        fo.write('\t'.join(list(map(str, f_out2))) + '\n')
     return True
 
 
@@ -356,18 +379,23 @@ def edits_parser(bam, genome_fa, outfile, snp_type, depth_cutoff, pct_cutoff,
         logging.info('edits file exists, skipping: ' + outfile)
     else:
         try:
-            # forward strand    
-            snp_parser(bam, genome_fa, outfile, strand = '+', 
-                       snp_type = snp_type, depth_cutoff = depth_cutoff, 
-                       pct_cutoff = pct_cutoff)
-            # reverse strand
-            snp_parser(bam, genome_fa, outfile, strand = '-', 
-                       snp_type = snp_type, depth_cutoff = depth_cutoff, 
-                       pct_cutoff = pct_cutoff, append = True)
+            if snp_type.lower() == 'dna':
+                snp_parser(bam, genome_fa, outfile, strand = '*', 
+                           snp_type = snp_type, depth_cutoff = depth_cutoff, 
+                           pct_cutoff = pct_cutoff)
+            elif snp_type.lower() == 'rna':
+                snp_parser(bam, genome_fa, outfile, strand = '+', 
+                           snp_type = snp_type, depth_cutoff = depth_cutoff, 
+                           pct_cutoff = pct_cutoff)
+                # reverse strand
+                snp_parser(bam, genome_fa, outfile, strand = '-', 
+                           snp_type = snp_type, depth_cutoff = depth_cutoff, 
+                           pct_cutoff = pct_cutoff, append = True)
+            else:
+                logging.info('unknown type of snp:' + snp_type)
         except IOError:
             logging.info('fail to call edits')
     return outfile
-
 
 
 
