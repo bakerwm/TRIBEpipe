@@ -11,6 +11,8 @@ How-To
 
   1. not within the first or last 6 bases of read
 
+  - mapping genomic DNA reads to genome using ``bwa``
+
 
 Here will explain the procedures of TRIBEpipe:
 
