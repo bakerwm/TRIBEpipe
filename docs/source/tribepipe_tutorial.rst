@@ -1,8 +1,8 @@
 .. _tutorial:
 
 
-Tutorial
-=========
+TRIBEpipe Tutorial
+===================
 
 Before we go through the tutorial, I suppose ``TRIBEpipe`` was installed on your machine. If not, go to :ref:`installation` for more details.
 

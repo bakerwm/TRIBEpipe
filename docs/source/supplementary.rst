@@ -1,7 +1,7 @@
 .. _reading:
 
 
-Reading paper
+Supplementary
 ==============
 
 
@@ -63,7 +63,7 @@ from Wikipedia
 	- agtcn denotes a base that did not match the reference on the reverse strand
 	- A sequence matching the regular expression \+[0-9]+[ACGTNacgtn]+ denotes an insertion of one or more bases starting from the next position
 	- A sequence matching the regular expression -[0-9]+[ACGTNacgtn]+ denotes a deletion of one or more bases starting from the next position
-	- ^ (caret) marks the start of a read segment and the ASCII of the character following `^' minus 33 gives the mapping quality
+	- ^ (caret) marks the start of a read segment and the ASCII of the character following '^' minus 33 gives the mapping quality
 	- $ (dollar) marks the end of a read segment
 	- * (asterisk) is a placeholder for a deleted base in a multiple basepair deletion that was mentioned in a previous line by the -[0-9]+[ACGTNacgtn]+ notation
 	
@@ -75,7 +75,7 @@ from Wikipedia
 
 from SAMTools:
 
-	where each line consists of chromosome, 1-based coordinate, reference base, the number of reads covering the site, read bases and base qualities. At the read base column, a dot stands for a match to the reference base on the forward strand, a comma for a match on the reverse strand, `ACGTN' for a mismatch on the forward strand and `acgtn' for a mismatch on the reverse strand. A pattern `\+[0-9]+[ACGTNacgtn]+' indicates there is an insertion between this reference position and the next reference position. The length of the insertion is given by the integer in the pattern, followed by the inserted sequence. Here is an example of 2bp insertions on three reads:
+	where each line consists of chromosome, 1-based coordinate, reference base, the number of reads covering the site, read bases and base qualities. At the read base column, a dot stands for a match to the reference base on the forward strand, a comma for a match on the reverse strand, 'ACGTN' for a mismatch on the forward strand and 'acgtn' for a mismatch on the reverse strand. A pattern '\+[0-9]+[ACGTNacgtn]+' indicates there is an insertion between this reference position and the next reference position. The length of the insertion is given by the integer in the pattern, followed by the inserted sequence. Here is an example of 2bp insertions on three reads:
 
 
 

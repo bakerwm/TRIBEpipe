@@ -1,8 +1,8 @@
 .. _procedures:
 
 
-Procedures
-===========
+How-To
+=======
 
 
 .. note::
@@ -10,9 +10,6 @@ Procedures
   filtering snps by:
 
   1. not within the first or last 6 bases of read
-
-
-
 
 
 Here will explain the procedures of TRIBEpipe:

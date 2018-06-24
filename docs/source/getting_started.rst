@@ -1,8 +1,8 @@
 .. _installation:
 
 
-Installation
-=============
+Getting Started
+================
 
 Download this repository and enter the main folder, run ``python setup.py install --user`` to install ``TRIBEpipe``.
 

@@ -23,10 +23,18 @@ HyperTRIBE_ [#]_ , an improved version of TRIBE_ [#]_, is a technique used for t
    :maxdepth: 2
    :caption: Contents:
 
-   Installation
-   Tutorial
-   Procedures
-   Reading_paper
+   getting_started
+   tribepipe_tutorial
+   how_to
+   supplementary
+
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Project:
+
+   project_index
 
 
 Indices and tables
