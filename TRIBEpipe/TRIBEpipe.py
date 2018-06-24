@@ -210,6 +210,10 @@ def genome_parser(genome, path = None, aligner = 'STAR'):
 
 
 
+
+
+
+
 def main():
     args = get_args()
 
@@ -222,11 +226,21 @@ def main():
 
     ## extract edits
     logging.info('step 1. processing TRIBE samples')
-    tribe_edits = tribe_edits_parser([i.name for i in args.i], subdirs[0], 
-                                     genome_fa, genome_index, args.a, args.m, 
-                                     args.cut, args.threads, 
-                                     args.tribe_depth_cutoff, 
-                                     args.tribe_pct_cutoff)
+    if isinstance(args.i, str):
+        tribe_edits = tribe_edits_parser([args.i.name, ], subdirs[0], 
+                                         genome_fa, genome_index, args.a, args.m, 
+                                         args.cut, args.threads, 
+                                         args.tribe_depth_cutoff, 
+                                         args.tribe_pct_cutoff)
+    elif isinstance(args.i, list):
+        tribe_edits = tribe_edits_parser([i.name for i in args.i], subdirs[0], 
+                                         genome_fa, genome_index, args.a, args.m, 
+                                         args.cut, args.threads, 
+                                         args.tribe_depth_cutoff, 
+                                         args.tribe_pct_cutoff)
+    else:
+        logging.error('unknonw -i tribe files')
+
 
     logging.info('step 2. processing genomic DNA sample')
     gDNA_edits = gDNA_edits_parser(args.gDNA.name, subdirs[1], 
