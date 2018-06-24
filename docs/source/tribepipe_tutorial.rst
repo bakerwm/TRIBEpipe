@@ -67,6 +67,7 @@ Running demo data
 Download the demo data from the following link: ftp://demo.tar.gz. 
 
 :: 
+
     # demo data
     $ wget ftp://demo.tar.gz
     $ tar zxvf demo.tar.gz
