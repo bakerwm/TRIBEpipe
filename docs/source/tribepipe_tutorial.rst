@@ -6,7 +6,7 @@ TRIBEpipe Tutorial
 
 Before we go through the tutorial, I suppose ``TRIBEpipe`` was installed on your machine. If not, go to :ref:`installation` for more details.
 
-``TRIBEpipe`` works like this with default parameters:
+A basic ``TRIBEpipe`` works like this with default parameters:
 
 ::
 
@@ -55,6 +55,8 @@ Preparing sequencing data
 - wtRNA: wild type RNA-seq data
 
 - tribe: TRIBE RNA-seq data
+
+In some case, using ADARcd alone samples to remove endogenous editing events
 
 Currently, only single-end (SE) reads supported.
 
@@ -141,7 +143,7 @@ The directory structure of ``results`` should like this:
     │       ├── tribe_rep1.mapping_stat.csv
     │       ├── tribe_rep2
     │       └── tribe_rep2.mapping_stat.csv
-    └── wt_RNA
+    └── wtRNA
         ├── edits
         │   └── wtRNA.edits.bedgraph
         ├── input_reads
@@ -155,7 +157,7 @@ The directory structure of ``results`` should like this:
             └── wtRNA.mapping_stat.csv
 
 
-There are three folders within ``resutls``: ``gDNA``, ``TRIBE`` and ``wt_RNA``.
+There are three folders within ``resutls``: ``gDNA``, ``TRIBE`` and ``wtRNA``.
 
 
 within each folder, there are three sub-folders:

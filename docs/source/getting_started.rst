@@ -4,13 +4,18 @@
 Getting Started
 ================
 
-Download this repository and enter the main folder, run ``python setup.py install --user`` to install ``TRIBEpipe``.
+Download this repository and enter the main folder, run ``python setup.py install`` to install ``TRIBEpipe``.
 
 ::
 
-    git clone <repo>
-    cd edits_parser
-    python setup.py install --user
+    git clone https://github.com/bakerwm/TRIBEpipe.git
+    cd TRIBEpipe
+    python setup.py install
+
+
+.. note::
+
+    Recommend ``conda`` for manage python and packages. see https://anaconda.org/ for more details.
 
 
 Requirements
@@ -32,24 +37,24 @@ Requirements
 Download genome data
 ---------------------
 
-This pipeline require ``FASTA``, ``GTF``, ``STAR_index`` files located in ``$HOME/data/genome`` with the following structure.  
+This pipeline requires ``FASTA``, ``GTF`` and ``STAR_index`` files located in ``$HOME/data/genome`` with the following structure.  
 
 FASTA and GTF file could be downlaoded from ensembl ftp site: http://asia.ensembl.org/info/data/ftp/index.html 
 
-For example, dm6
+For example, dm6 (for fruitfly)
 
 :: 
 
-    dm6
-    ├── annotation_and_repeats/dm6.ensembl.gtf
-    ├── bigZips/dm6.fa
-    └── STAR_index/
+    $HOME/data/genome/dm6
+                       ├── annotation_and_repeats/dm6.ensembl.gtf
+                       ├── bigZips/dm6.fa
+                       └── STAR_index/
 
 
-Test
------
+Have a try
+-----------
 
-Installation is OK, if you can find the following message when typing ``TRIBEpipe -h`` in your console.
+It means the installation is OK, if you can see the following message when typing ``TRIBEpipe -h`` in your console.
 
 ::
 
