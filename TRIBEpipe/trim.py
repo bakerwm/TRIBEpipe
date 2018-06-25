@@ -14,9 +14,10 @@ Trimming FASTQ reads, SE an PE
  https://docs.python.org/3/library/argparse.html
 """
 
-__author__ = "Ming Wang"
+__author__ = "Ming Wang <wangm08@hotmail.com>"
+__copyright__ = "2018 by Ming Wang <wangm08@hotmail.com>"
+__license__ = "MIT"
 __email__ = "wangm08@hotmail.com"
-__date__ = "2018-06-13"
 __version__ = "0.1"
 
 import os, sys

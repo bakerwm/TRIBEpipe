@@ -31,6 +31,13 @@ output:
 12      N count       
 """
 
+__author__ = "Ming Wang <wangm08@hotmail.com>"
+__copyright__ = "2018 by Ming Wang <wangm08@hotmail.com>"
+__license__ = "MIT"
+__email__ = "wangm08@hotmail.com"
+__version__ = "0.1"
+
+
 import os, sys, re, argparse, logging
 import pybedtools
 
