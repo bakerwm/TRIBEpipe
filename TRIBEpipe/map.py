@@ -300,6 +300,7 @@ def pcr_dup_remover(bam_in):
     """
     picard_jar = '/data/biosoft/picard/build/libs/picard.jar'
     if not os.path.exists(picard_jar):
+        logging.error('file not found - picard.jar')
         return None
     bam_nodup = os.path.splitext(bam_in)[0] + '.nodup.bam'
     metrics_nodup = os.path.splitext(bam_in)[0] + '.nodup.metrics'
