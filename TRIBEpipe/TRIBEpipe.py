@@ -272,18 +272,42 @@ def main():
 
 
     logging.info('step 2. processing genomic DNA sample')
-    gDNA_edits = gDNA_edits_parser(args.gDNA.name, subdirs[1], 
-                                   genome_fa, genome_index, args.a, args.m, 
-                                   args.cut, args.threads, 
-                                   args.gDNA_depth_cutoff, 
-                                   args.gDNA_pct_cutoff)
+    if isinstance(args.gDNA, str):
+        gDNA_edits = gDNA_edits_parser(args.gDNA.name, subdirs[1], 
+                                       genome_fa, genome_index, 
+                                       args.a, args.m, 
+                                       args.cut, args.threads, 
+                                       args.gDNA_depth_cutoff, 
+                                       args.gDNA_pct_cutoff)
+    elif isinstance(args.gDNA, list):
+        gDNA_edits = gDNA_edits_parser([i.name for i in args.gDNA], subdirs[1], 
+                                       genome_fa, genome_index, 
+                                       args.a, args.m, 
+                                       args.cut, args.threads, 
+                                       args.gDNA_depth_cutoff, 
+                                       args.gDNA_pct_cutoff)
+    else:
+        logging.error('unknonw -gDNA files')
+
 
     logging.info('step 3. processing wildtype RNA-seq sample')
-    wtRNA_edits = wtRNA_edits_parser(args.wtRNA.name, subdirs[2], 
-                                     genome_fa, genome_index, args.a, args.m, 
-                                     args.cut, args.threads, 
-                                     args.wtRNA_depth_cutoff, 
-                                     args.wtRNA_pct_cutoff)
+    if isinstance(args.gDNA, str):
+        wtRNA_edits = wtRNA_edits_parser(args.wtRNA.name, subdirs[2], 
+                                         genome_fa, genome_index, 
+                                         args.a, args.m, 
+                                         args.cut, args.threads, 
+                                         args.wtRNA_depth_cutoff, 
+                                         args.wtRNA_pct_cutoff)
+    elif isinstance(args.wtRNA, list):
+        wtRNA_edits = wtRNA_edits_parser([i.name for i in args.wtRNA], 
+                                         subdirs[2], 
+                                         genome_fa, genome_index, 
+                                         args.a, args.m, 
+                                         args.cut, args.threads, 
+                                         args.wtRNA_depth_cutoff, 
+                                         args.wtRNA_pct_cutoff)
+    else:
+        logging.error('unknonw -wtRNA files')
 
     logging.info('step 4. filtering TRIBE editing events')
     final_dir = os.path.join(args.o, 'TRIBE', 'edits_filted')
