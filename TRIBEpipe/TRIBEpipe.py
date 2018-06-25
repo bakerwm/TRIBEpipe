@@ -122,8 +122,8 @@ def tribe_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut,
     tribe_map_dir = os.path.join(outdir, 'mapping')
     tribe_map_bam = []
     if merge is True:
-        b = map.map(tribe_clean_fq, 'merged', tribe_map_dir, threads, genome_index,
-                    map_tools = 'STAR')
+        b = map.map(tribe_clean_fq, 'merged', tribe_map_dir, threads, 
+                    genome_index, map_tools = 'STAR')
         tribe_map_bam = [map.pcr_dup_remover(i) for i in b]
     else:
         for fq in tribe_clean_fq:       
@@ -165,7 +165,7 @@ def gDNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut,
     if merge is True:
         b = map.map(gDNA_clean_fq, 'merged', gDNA_map_dir, threads, 
                     genome_index, map_tools = 'STAR',)
-        gDNA_map_bam = [map.pcr_dup_remover(i) for i in b]
+        gDNA_map_bam.append(b[-1])
     else:
         for fq in gDNA_clean_fq:
             b = map.map([fq], 'merged', gDNA_map_dir, threads, genome_index,
@@ -205,7 +205,7 @@ def wtRNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut,
     if merge is True:
         b = map.map(wtRNA_clean_fq, 'merged', wtRNA_map_dir, threads, 
                     genome_index, map_tools = 'STAR')
-        wtRNA_map_bam = [map.pcr_dup_remover(i) for i in b]
+        wtRNA_map_bam.append(b[-1])
     else:
         for fq in wtRNA_clean_fq:
             b = map.map([fq], 'merged', wtRNA_map_dir, threads, genome_index, 
@@ -255,13 +255,15 @@ def main():
     logging.info('step 1. processing TRIBE samples')
     if isinstance(args.i, str):
         tribe_edits = tribe_edits_parser([args.i.name, ], subdirs[0], 
-                                         genome_fa, genome_index, args.a, args.m, 
+                                         genome_fa, genome_index, args.a, 
+                                         args.m, 
                                          args.cut, args.threads, 
                                          args.tribe_depth_cutoff, 
                                          args.tribe_pct_cutoff)
     elif isinstance(args.i, list):
         tribe_edits = tribe_edits_parser([i.name for i in args.i], subdirs[0], 
-                                         genome_fa, genome_index, args.a, args.m, 
+                                         genome_fa, genome_index, args.a, 
+                                         args.m, 
                                          args.cut, args.threads, 
                                          args.tribe_depth_cutoff, 
                                          args.tribe_pct_cutoff)
