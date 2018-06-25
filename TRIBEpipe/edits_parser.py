@@ -242,7 +242,7 @@ def rna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
     start = int(fs[1]) - 1
     name = fs[0] + '_' + fs[1] + '_{}_{}%'.format(int(nTotal), int(fHit))
     # f_out = [fs[0], start, fs[1], fHit, name, fs[2]] + fs[3:8] + [str(nN)]
-    f_out = [fs[0], start, fs[1], fHit, name, fs[2], nTotal] + fs[4:8] + [str(nN)]
+    f_out = [fs[0], start, fs[1], int(fHit), name, fs[2], nTotal] + fs[4:8] + [str(nN)]
     return list(map(str, f_out))
 
 
@@ -301,7 +301,7 @@ def dna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = None):
     ## for BED3 format
     start = int(fs[1]) - 1
     name = fs[0] + '_' + fs[1] + '_{}_{}%'.format(int(nTotal), int(fHit))
-    f_out = [fs[0], start, fs[1], fHit, name, fs[2], nTotal] + fs[4:8] + [str(nN)]
+    f_out = [fs[0], start, fs[1], int(fHit), name, fs[2], nTotal] + fs[4:8] + [str(nN)]
     return list(map(str, f_out))
 
 

@@ -56,11 +56,11 @@ def get_args():
     parser.add_argument('-i', nargs = '+', required = True, metavar = 'TRIBE', 
         type = argparse.FileType('r'),
         help = 'TRIBE sample in fastq format, (Single-end reads)')
-    parser.add_argument('-gDNA', required = False, metavar = 'gDNA', 
-        type = argparse.FileType('r'),
+    parser.add_argument('-gDNA', nargs = '+', required = False, 
+        metavar = 'gDNA', type = argparse.FileType('r'),
         help = 'genomic DNA sample in fastq format, as control')
-    parser.add_argument('-wtRNA', required = False, metavar = 'wtRNA', 
-        type = argparse.FileType('r'),
+    parser.add_argument('-wtRNA', nargs = '+', required = False, 
+        metavar = 'wtRNA', type = argparse.FileType('r'),
         help = 'wild-type RNA-seq data in fastq format, as control')
     parser.add_argument('-g', required = True, metavar = 'Genome',
         help = 'genome build of the reference, default: [dm6]')
@@ -68,40 +68,46 @@ def get_args():
         help = 'the directory to save results')
     parser.add_argument('--tribe_depth_cutoff', default = 20, type = int, 
         metavar = 'tribe_depth',
-        help = 'minimum read depth at editing position for tribe samples, default: 20')
+        help = 'minimum read depth at editing position for tribe samples, \
+        default: 20')
     parser.add_argument('--tribe_pct_cutoff', default = 10, type = int,
         metavar = 'percentage',
-        help = 'minimum editing percentage [1-100]%% for tribe samples, default: 10')
+        help = 'minimum editing percentage [1-100]%% for tribe samples, \
+        default: 10')
     parser.add_argument('--gDNA_depth_cutoff', default = 1, type = int, 
         metavar = 'gDNA_depth',
-        help = 'minimum read depth at editing position for genomic DNA samples, default: 1')
+        help = 'minimum read depth at editing position for genomic DNA samples,\
+        default: 1')
     parser.add_argument('--gDNA_pct_cutoff', default = 80, type = int,
         metavar = 'percentage',
         help = 'minimum percentage [1-100]%% of reference base, default: 80')
     parser.add_argument('--wtRNA_depth_cutoff', default = 10, type = int, 
         metavar = 'wtRNA_depth',
-        help = 'minimum read depth at editing position for wtRNA samples, default: 10')
+        help = 'minimum read depth at editing position for wtRNA samples, \
+        default: 10')
     parser.add_argument('--wtRNA_pct_cutoff', default = 10, type = int,
         metavar = 'percentage',
-        help = 'minimum editing percentage [1-100]%% for wtRNA samples, default: 10')    
+        help = 'minimum editing percentage [1-100]%% for wtRNA samples, \
+        default: 10')
     parser.add_argument('-a', metavar = 'adapter', default = None,
         help = 'adapter sequences at 3-prime end, default: TruSeq')
     parser.add_argument('-m', metavar = 'min_length', type = int, default = 19,
         help = 'minimum length of reads, default: 19')
-    parser.add_argument('--cut', metavar = 'cut N bases', type = int, default = 0,
-        help = 'cut N bases from reads, plus value at left of read, minus value at right of read\
-                default: 0')
+    parser.add_argument('--cut', metavar = 'cut N bases', type = int, 
+        default = 0,
+        help = 'cut N bases from reads, plus value at left of read, minus value \
+        at right of read default: 0')
     parser.add_argument('--threads', metavar = 'Threads', type = int, default = 1,
         help = 'number of threads to use for the pipeline, default: 1')
     parser.add_argument('--genome_data', metavar = 'genome_data', default = None,
         help = 'specify the directory contains genome data, eg: fasta, gtf, index \
-                default: [$HOME/data/genome/]')
+        default: [$HOME/data/genome/]')
     args = parser.parse_args()
     return args
 
 
 def tribe_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut, 
-                       threads, depth_cutoff, pct_cutoff):
+                       threads, depth_cutoff, pct_cutoff, merge = True):
     """extract editing events from TRIBE samples"""
     ## Trimming
     tribe_trim_dir = os.path.join(outdir, 'input_reads')
@@ -115,11 +121,16 @@ def tribe_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut,
     ## Mapping
     tribe_map_dir = os.path.join(outdir, 'mapping')
     tribe_map_bam = []
-    for fq in tribe_clean_fq:       
-        b = map.map([fq], 'demo', tribe_map_dir, threads, genome_index,
-                    map_tools = 'STAR')
-        bx = map.pcr_dup_remover(b[0])
-        tribe_map_bam.append(bx)
+    if merge is True:
+        b = map.map(tribe_clean_fq, 'merged', tribe_map_dir, threads, 
+                    genome_index, map_tools = 'STAR')
+        tribe_map_bam = [map.pcr_dup_remover(i) for i in b]
+    else:
+        for fq in tribe_clean_fq:       
+            b = map.map([fq], 'demo', tribe_map_dir, threads, genome_index,
+                        map_tools = 'STAR')
+            bx = map.pcr_dup_remover(b[0])
+            tribe_map_bam.append(bx)
 
     ## extract edits
     tribe_edits_dir = os.path.join(outdir, 'edits')
@@ -136,7 +147,7 @@ def tribe_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut,
 
 
 def gDNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut, 
-                       threads, depth_cutoff, pct_cutoff):
+                       threads, depth_cutoff, pct_cutoff, merge = True):
     """extract editing events from genomic DNA-seq sample"""
     ## Trimming
     gDNA_trim_dir = os.path.join(outdir, 'input_reads')
@@ -150,23 +161,33 @@ def gDNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut,
 
     ## Mapping
     gDNA_map_dir = os.path.join(outdir, 'mapping')
-    gDNA_map_bam = map.map([gDNA_clean_fq[0]], 'demo', gDNA_map_dir,
-                           threads, genome_index, map_tools = 'STAR')
-    # bx = map.pcr_dup_remover(b[0])
+    gDNA_map_bam = []
+    if merge is True:
+        b = map.map(gDNA_clean_fq, 'merged', gDNA_map_dir, threads, 
+                    genome_index, map_tools = 'STAR',)
+        gDNA_map_bam.append(b[-1])
+    else:
+        for fq in gDNA_clean_fq:
+            b = map.map([fq], 'merged', gDNA_map_dir, threads, genome_index,
+                        map_tools = 'STAR')
+            gDNA_map_bam.append(b)
 
     ## extract edits
     gDNA_edits_dir = os.path.join(outdir, 'edits')
-    prefix = os.path.splitext(os.path.basename(gDNA_map_bam[0]))[0]
-    bam_edits = os.path.join(gDNA_edits_dir, prefix + '.edits.bedgraph')
-    gDNA_edits = edits_parser.edits_parser(gDNA_map_bam[0], genome_fa, bam_edits, 
-                                           'DNA', depth_cutoff, pct_cutoff)
+    gDNA_edits = []
+    for bam in gDNA_map_bam:
+        prefix = os.path.splitext(os.path.basename(bam))[0]
+        bam_edits = os.path.join(gDNA_edits_dir, prefix + '.edits.bedgraph')
+        edits_parser.edits_parser(bam, genome_fa, bam_edits, 'DNA',
+                                  depth_cutoff, pct_cutoff)
+        gDNA_edits.append(bam_edits)
 
     return gDNA_edits
 
 
 
 def wtRNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut, 
-                       threads, depth_cutoff, pct_cutoff):
+                       threads, depth_cutoff, pct_cutoff, merge = True):
     """extract editing events from genomic DNA-seq sample"""
     ## Trimming
     wtRNA_trim_dir = os.path.join(outdir, 'input_reads')
@@ -180,16 +201,27 @@ def wtRNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut,
     
     ## Mapping
     wtRNA_map_dir = os.path.join(outdir, 'mapping')
-    wtRNA_map_bam = map.map([wtRNA_clean_fq[0]], 'demo', wtRNA_map_dir,
-                           threads, genome_index, map_tools = 'STAR')
-    # bx = map.pcr_dup_remover(b[0])
-
+    wtRNA_map_bam = []
+    if merge is True:
+        b = map.map(wtRNA_clean_fq, 'merged', wtRNA_map_dir, threads, 
+                    genome_index, map_tools = 'STAR')
+        wtRNA_map_bam.append(b[-1])
+    else:
+        for fq in wtRNA_clean_fq:
+            b = map.map([fq], 'merged', wtRNA_map_dir, threads, genome_index, 
+                        map_tools = 'STAR')
+            bx = map.pcr_dup_remover(b[0])
+            wtRNA_map_bam.append(bx)
+    
     ## extract edits
     wtRNA_edits_dir = os.path.join(outdir, 'edits')
-    prefix = os.path.splitext(os.path.basename(wtRNA_map_bam[0]))[0]
-    bam_edits = os.path.join(wtRNA_edits_dir, prefix + '.edits.bedgraph')
-    wtRNA_edits = edits_parser.edits_parser(wtRNA_map_bam[0], genome_fa, bam_edits, 
-                                           'RNA', depth_cutoff, pct_cutoff)
+    wtRNA_edits = []
+    for bam in wtRNA_map_bam:
+        prefix = os.path.splitext(os.path.basename(bam))[0]
+        bam_edits = os.path.join(wtRNA_edits_dir, prefix + '.edits.bedgraph')
+        edits_parser.edits_parser(bam, genome_fa, bam_edits, 'RNA', 
+                                  depth_cutoff, pct_cutoff)
+        wtRNA_edits.append(bam_edits)
 
     return wtRNA_edits
 
@@ -209,11 +241,6 @@ def genome_parser(genome, path = None, aligner = 'STAR'):
     return [genome_fa, genome_gtf, genome_index]
 
 
-
-
-
-
-
 def main():
     args = get_args()
 
@@ -228,13 +255,15 @@ def main():
     logging.info('step 1. processing TRIBE samples')
     if isinstance(args.i, str):
         tribe_edits = tribe_edits_parser([args.i.name, ], subdirs[0], 
-                                         genome_fa, genome_index, args.a, args.m, 
+                                         genome_fa, genome_index, args.a, 
+                                         args.m, 
                                          args.cut, args.threads, 
                                          args.tribe_depth_cutoff, 
                                          args.tribe_pct_cutoff)
     elif isinstance(args.i, list):
         tribe_edits = tribe_edits_parser([i.name for i in args.i], subdirs[0], 
-                                         genome_fa, genome_index, args.a, args.m, 
+                                         genome_fa, genome_index, args.a, 
+                                         args.m, 
                                          args.cut, args.threads, 
                                          args.tribe_depth_cutoff, 
                                          args.tribe_pct_cutoff)

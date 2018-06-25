@@ -43,21 +43,20 @@ def get_args():
     parser = argparse.ArgumentParser(
         prog = 'edits_filter', description = 'Fitering editing events',
         epilog = 'Output: ')
-    parser.add_argument('-i', nargs = '+', required = True, metavar = 'TRIBE',
+    parser.add_argument('-i', required = True, 
+        type = argparse.FileType('r'), metavar = 'TRIBE',
         help = 'editing events of TRIBE sample')
-    parser.add_argument('-gDNA', required = False, metavar = 'genomic_DNA',
-        help = 'editing events in genomic DNA, included in results')
-    parser.add_argument('-wtRNA', nargs = '+', required = False, 
-        metavar = 'wildtype_RNA', type = argparse.FileType('r'),
-        help = 'editing events in wildtype RNA-seq, excluded from results')
-    # parser.add_argument('-c', nargs = '+', required = True,  metavar = 'Control',
-    #     type = argparse.FileType('r'),
-    #     help = 'edit events of control samples, genomic DNA, wildtype mRNA, etc.')
+    parser.add_argument('-gDNA', nargs = '+', required = False, 
+        type = argparse.FileType('r'), metavar = 'gDNA',
+        help = 'editing events in genomic DNA, included')
+    parser.add_argument('-wtRNA', nargs = '+', required = False,
+        type = argparse.FileType('r'), metavar = 'wtRNA',
+        help = 'editing events in wildtype RNA-seq, excluded')
     parser.add_argument('-g', required = True, metavar = 'GTF',
         help = 'gene annotation in GFF format')
     parser.add_argument('-o', required = True, metavar = 'Output',
         help = 'file to save the results')
-    parser.add_argument('--remove_tmp', action = 'strore_true',
+    parser.add_argument('--remove_tmp', action = 'store_true',
         help = 'if specified, remove temp file, anno.bed')
     args = parser.parse_args()
     return args
@@ -137,7 +136,6 @@ def gtf2bed(in_gtf, out_bed, feature = True):
 
 
 
-
 def bed_filter(bed_in, bed_excludes, exclude = True):
     """
     exclude bed_exclude records from bed_in
@@ -168,23 +166,32 @@ def bed_anno(bed_in, bed_info, bed_out):
     default: bed6 and bed6
     """
     assert isinstance(bed_in, pybedtools.bedtool.BedTool)
-    # b_in = pybedtools.BedTool(bed_in)
     b_info = pybedtools.BedTool(bed_info)
-    # t = bed_in.intersect(b_info, wa = True, wb = True, stream = True)
     t = bed_in.intersect(b_info, f = 0.9, loj = True, stream = True)
     try:
+        dd = {} # check duplicates
         with open(bed_out, 'wt') as fo:
-            for b in t:
+            for b in t.sort():
                 fs = str(b).strip().split('\t')
-                fs2 =  fs[:-6] + [fs[-3]] # add feature to the end
-                fo.write('\t'.join(fs2) + '\n')
+                fs2 = fs[:-6] + [fs[-3]] # add feature to the end
+                pos = ','.join(fs[0:3])  
+                if pos in dd:
+                    fo.write(',' + fs[-3])
+                else:
+                    if dd == {}:
+                        fo.write('\t'.join(fs2))
+                    else:
+                        fo.write('\n' + '\t'.join(fs2))
+                    dd[pos] = 1
+                # fo.write('\t'.join(fs2))
+            fo.write('\n') # end
     except IOError:
-        logging.info('fail, processing BED annotation')
+        logging.error('fail, processing BED annotation')        
 
 
 
 def edits_filter(edits_tribe, edits_gDNA, edits_wtRNA, 
-                     gtf, edits_tribe_filt, remove_tmp = False):
+                 gtf, edits_tribe_filt, remove_tmp = False):
     """filtering edits"""
     assert isinstance(edits_tribe, str)
     # assert isinstance(edits_gDNA, str)
@@ -194,13 +201,28 @@ def edits_filter(edits_tribe, edits_gDNA, edits_wtRNA,
         gtf2bed(gtf, gene_bed, feature = 'gene') # convert annotation
 
     # outdir
-    if not os.path.exists(os.path.dirname(edits_tribe_filt)):
-        os.makedirs(os.path.dirname(edits_tribe_filt))
+    out_path = os.path.dirname(edits_tribe_filt)
+    if not os.path.exists(out_path) and not out_path == '':
+        os.makedirs(out_path)
     
     # include gDNA
-    if os.path.exists(edits_gDNA):
-        b1 = bed_filter(pybedtools.BedTool(edits_tribe), 
-                        [edits_gDNA, ], exclude = False)
+    if isinstance(edits_gDNA, str):
+        if os.path.exists(edits_gDNA):
+            b1 = bed_filter(pybedtools.BedTool(edits_tribe), 
+                            [edits_gDNA, ], exclude = False)
+        else:
+            b1 = pybedtools.BedTool(edits_tribe)
+    elif isinstance(edits_gDNA, list):
+        b_in = pybedtools.BedTool(edits_tribe)
+        b_out = b_in
+        for gDNA in edits_gDNA:
+            if os.path.exists(gDNA):
+                b_out = bed_filter(b_in, [gDNA, ], exclude = False)
+            else:
+                b_out = b_in
+            # cycle
+            b_in = b_out
+        b1 = b_out
     else:
         b1 = pybedtools.BedTool(edits_tribe)
 
@@ -221,6 +243,8 @@ def edits_filter(edits_tribe, edits_gDNA, edits_wtRNA,
             # cycle
             b_in = b_out
         b2 = b_out
+    else:
+        b2 = b1
 
 
     # annotation
@@ -233,18 +257,15 @@ def edits_filter(edits_tribe, edits_gDNA, edits_wtRNA,
     return edits_tribe_filt
 
 
-
 def main():
     args = get_args()
-    edits_tribe = [i.name for i in args.i]
-    # edits_control = [i.name for i in args.c]
-    edits_gDNA = args.gDNA
-    edits_wtRNA = args.wtRNA
-    # edits_filter(edits_tribe, edits_control, args.g, args.o, args.remove_tmp)
+    # edits_tribe = [i.name for i in args.i]
+    edits_tribe = args.i.name
+    edits_gDNA = None if args.gDNA is None else [i.name for i in args.gDNA]
+    edits_wtRNA = None if args.wtRNA is None else [i.name for i in args.wtRNA]
     for i in args.i:
-        edits_filter(i.name, edits_gDNA, edits_wtRNA, args.g,
+        edits_filter(edits_tribe, edits_gDNA, edits_wtRNA, args.g,
                      args.o, args.remove_tmp)
-
 
 
 if __name__ == '__main__':
