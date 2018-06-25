@@ -75,26 +75,20 @@ Extract the nucleotide frequencies at each position on chromosome with ``samtool
 
 :: 
 
-    # forward strand
-    $ samtools view -f 16 -bhS in.bam | \
-        samtools mpileup -f dm6.fa - > out_fwd.mpileup
-
-    # reverse strand
-    $ samtools view -F 16 -bhS in.bam | \
-        samtools mpileup -f dm6.fa - > out_rev.mpileup
+    $ samtools mpileup -AB -d 100000 -ff 4 -q 0 -Q 0 -s -f dm6.fa in.bam > out.mpileup
 
     # The output format of mpileup
-    $ head out_fwd.mpileup
-    chr2L   10598   A       1       ^~,     B
-    chr2L   10599   A       1       ,       E
-    chr2L   10600   T       1       ,       E
-    chr2L   10601   C       1       ,       E
-    chr2L   10602   T       1       ,       E
-    chr2L   10603   T       1       ,       E
-    chr2L   10604   T       1       ,       E
-    chr2L   10605   G       1       ,       E
-    chr2L   10606   A       1       ,       E
-    chr2L   10607   A       1       ,       E
+    $ head out.mpileup
+    chr4    320     a       1       ^~.     F       ~
+    chr4    321     t       1       .       H       ~
+    chr4    322     t       1       .       H       ~
+    chr4    323     a       1       .       H       ~
+    chr4    324     t       1       .       H       ~
+    chr4    325     t       1       .       H       ~
+    chr4    326     a       1       .       J       ~
+    chr4    327     t       1       .       I       ~
+    chr4    328     a       1       .       J       ~
+    chr4    329     t       1       .       J       ~
 
     column        content
     1            chromosome
@@ -103,6 +97,20 @@ Extract the nucleotide frequencies at each position on chromosome with ``samtool
     4            the number of reads covering the site
     5            read bases
     6            base qualities
+    7            mapping qualities
+
+
+For RNA samples, separate **forward** and **reverse** reads before ``mpileup``.
+
+::
+
+    # forward strand
+    $ samtools view -F 16 -bhS in.bam | \
+        samtools mpileup -AB -d 100000 -ff 4 -q 0 -Q 0 -s -f dm6.fa - > out_fwd.mpileup
+
+    # reverse strand
+    $ samtools view -f 16 -bhS in.bam | \
+        samtools mpileup -AB -d 100000 -ff 4 -q 0 -Q 0 -s -f dm6.fa - > out_fwd.mpileup
 
 
 Find more about ``mpileup`` at http://samtools.sourceforge.net/pileup.shtml and https://davetang.org/muse/2015/08/26/samtools-mpileup/ 
