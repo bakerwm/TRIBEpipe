@@ -198,11 +198,23 @@ def edits_filter(edits_tribe, edits_gDNA, edits_wtRNA,
         os.makedirs(os.path.dirname(edits_tribe_filt))
     
     # include gDNA
-    if os.path.exists(edits_gDNA):
-        b1 = bed_filter(pybedtools.BedTool(edits_tribe), 
-                        [edits_gDNA, ], exclude = False)
-    else:
-        b1 = pybedtools.BedTool(edits_tribe)
+    if isinstance(edits_gDNA, str):
+        if os.path.exists(edits_gDNA):
+            b1 = bed_filter(pybedtools.BedTool(edits_tribe), 
+                            [edits_gDNA, ], exclude = False)
+        else:
+            b1 = pybedtools.BedTool(edits_tribe)
+    elif isinstance(edits_gDNA, list):
+        b_in = pybedtools.BedTool(edits_tribe)
+        b_out = b_in
+        for gDNA in edits_gDNA:
+            if os.path.exists(gDNA):
+                b_out = bed_filter(b_in, [gDNA, ], exclude = False)
+            else:
+                b_out = b_in
+            # cycle
+            b_in = b_out
+        b1 = b_out
 
     # exclude wtRNA
     if isinstance(edits_wtRNA, str):
