@@ -146,12 +146,12 @@ def tribe_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut,
 
 
 
-def gDNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut, 
+def gDNA_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut, 
                        threads, depth_cutoff, pct_cutoff, merge = True):
     """extract editing events from genomic DNA-seq sample"""
     ## Trimming
     gDNA_trim_dir = os.path.join(outdir, 'input_reads')
-    gDNA_clean_fq = trim.trim(fqs = [fq], 
+    gDNA_clean_fq = trim.trim(fqs = fqs, 
                               adapter3 = ad3,
                               out_path = gDNA_trim_dir, 
                               len_min = len_min, 
@@ -186,12 +186,12 @@ def gDNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut,
 
 
 
-def wtRNA_edits_parser(fq, outdir, genome_fa, genome_index, ad3, len_min, cut, 
+def wtRNA_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut, 
                        threads, depth_cutoff, pct_cutoff, merge = True):
     """extract editing events from genomic DNA-seq sample"""
     ## Trimming
     wtRNA_trim_dir = os.path.join(outdir, 'input_reads')
-    wtRNA_clean_fq = trim.trim(fqs = [fq], 
+    wtRNA_clean_fq = trim.trim(fqs = fqs, 
                                adapter3 = ad3,
                                out_path = wtRNA_trim_dir, 
                                len_min = len_min, 
