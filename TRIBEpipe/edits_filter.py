@@ -212,11 +212,11 @@ def edits_filter(edits_tribe, edits_gDNA, edits_wtRNA,
     if not os.path.exists(out_path) and not out_path == '':
         os.makedirs(out_path)
     
-    # include gDNA
+    ## exclude gDNA
     if isinstance(edits_gDNA, str):
         if os.path.exists(edits_gDNA):
             b1 = bed_filter(pybedtools.BedTool(edits_tribe), 
-                            [edits_gDNA, ], exclude = False)
+                            [edits_gDNA, ], exclude = True)
         else:
             b1 = pybedtools.BedTool(edits_tribe)
     elif isinstance(edits_gDNA, list):
@@ -224,7 +224,7 @@ def edits_filter(edits_tribe, edits_gDNA, edits_wtRNA,
         b_out = b_in
         for gDNA in edits_gDNA:
             if os.path.exists(gDNA):
-                b_out = bed_filter(b_in, [gDNA, ], exclude = False)
+                b_out = bed_filter(b_in, [gDNA, ], exclude = True)
             else:
                 b_out = b_in
             # cycle

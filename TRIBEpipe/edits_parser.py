@@ -291,18 +291,29 @@ def dna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = None):
     fT = nT / nTotal * 100
     fHit = None
     if strand == '-':
-        if refbase == 'A' and fT >= pct_cutoff and fC == 0:
-            fHit = fT
-        elif refbase == 'T' and fA >= pct_cutoff and fG == 0:
-            fHit = fA
+        if refbase == 'A':
+            if fT < pct_cutoff or fC > 0:
+                fHit = fT
+            else:
+                return None
+        elif refbase == 'T':
+            if fA < pct_cutoff or fG > 0:
+                fHit = fA
+            else:
+                return None
         else:
-            # print(fs)
             return None
     else:
-        if refbase == 'A' and fA >= pct_cutoff and fG == 0:
-            fHit = fA
-        elif refbase == 'T' and fT >= pct_cutoff and fC == 0:
-            fHit = fT
+        if refbase == 'A':
+            if fA < pct_cutoff or fG > 0:
+                fHit = fA
+            else:
+                return None
+        elif refbase == 'T':
+            if fT < pct_cutoff or fC > 0:
+                fHit = fT
+            else:
+                return None
         else:
             return None
     ## for BED3 format
