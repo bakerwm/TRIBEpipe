@@ -503,7 +503,6 @@ def merge_map_wrapper(fn, save = True):
     b_files = sorted(glob.glob(fn + '/*.bam'), key = len) # bam files
     b_prefix = os.path.basename(fn)
     df = pd.DataFrame(columns = ['name', 'group', 'read'])
-    #for b in b_files:
     for n in range(len(b_files)):
         b_cnt = pysam.AlignmentFile(b_files[n], 'rb').count()
         group = os.path.basename(b_files[n]).split('.')[-2] #
@@ -584,6 +583,7 @@ def main():
         for b in p:
             x = pcr_dup_remover(b)
             px.append(x)
+            pysam.index(x)
         p_out = px
     return p_out
 
