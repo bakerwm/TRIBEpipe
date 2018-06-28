@@ -313,6 +313,7 @@ def pcr_dup_remover(bam_in):
     if os.path.exists(bam_in) and not os.path.exists(bam_nodup):
         with open(log_nodup, 'w') as fo:
             p1 = subprocess.run(shlex.split(c1), stdout = fo, stderr = fo)
+        pysam.index(bam_nodup)
     return bam_nodup
 
 
@@ -583,7 +584,6 @@ def main():
         for b in p:
             x = pcr_dup_remover(b)
             px.append(x)
-            pysam.index(x)
         p_out = px
     return p_out
 
