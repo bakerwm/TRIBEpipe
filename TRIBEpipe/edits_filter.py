@@ -175,25 +175,31 @@ def bed_anno(bed_in, bed_info, bed_out):
     assert isinstance(bed_in, pybedtools.bedtool.BedTool)
     b_info = pybedtools.BedTool(bed_info)
     t = bed_in.intersect(b_info, f = 0.9, loj = True, stream = True)
+    t.sort().saveas(bed_out + '.tmp')
+    # # why tail()?
+    # # pybedtools issue #246 
+    # # https://github.com/daler/pybedtools/issues/246
+    # for b in t.sort().tail(1000000000): 
+
     try:
-        dd = {} # check duplicates
-        with open(bed_out, 'wt') as fo:
-            for b in t.sort():
-                fs = str(b).strip().split('\t')
-                fs2 = fs[:-6] + [fs[-3]] # add feature to the end
-                pos = ','.join(fs[0:3])  
+        dd = {}
+        with open(bed_out + '.tmp') as fi, open(bed_out, 'wt') as fo:
+            for line in fi:
+                fs = line.strip().split('\t')
+                fout = fs[:-6] + [fs[-3]]
+                pos = ':'.join(fs[0:3])
                 if pos in dd:
                     fo.write(',' + fs[-3])
                 else:
                     if dd == {}:
-                        fo.write('\t'.join(fs2))
+                        fo.write('\t'.join(fout))
                     else:
-                        fo.write('\n' + '\t'.join(fs2))
+                        fo.write('\n' + '\t'.join(fout))
                     dd[pos] = 1
-                # fo.write('\t'.join(fs2))
-            fo.write('\n') # end
+            fo.write('\n')
+        os.remove(bed_out + '.tmp')
     except IOError:
-        logging.error('fail, processing BED annotation')        
+        logging.error('fail, processing BED annotation')
 
 
 
