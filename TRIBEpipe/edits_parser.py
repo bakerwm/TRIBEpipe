@@ -369,7 +369,6 @@ def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna',
         while True:
             line = p2.stdout.readline().strip()
             if not line: break
-            # fo.write(line + '\n')
             chr, pos, refbase, depth, pileup, quality, map_quality = line.strip().split('\t')
             refbase = refbase.upper()
             depth = int(depth)
