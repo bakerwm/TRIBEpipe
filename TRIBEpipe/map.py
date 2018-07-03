@@ -39,13 +39,14 @@ def get_args():
         help = 'Sequencing reads in FASTQ format, 1-4 files.')
     parser.add_argument('-n', required = True, metavar = 'NAME',
         help = 'Name of the experiment')
-    parser.add_argument('-o', required = True, default = None, metavar = 'OUTPUT',  
-        help = 'The directory to save results.')
+    parser.add_argument('-o', required = True, default = None, 
+        metavar = 'OUTPUT', help = 'The directory to save results.')
     parser.add_argument('-g', default = 'hg19', metavar = 'GENOME',
         help = 'Reference genome : dm3, dm6, hg19, GRCh38, mm10, GRCm38')
     parser.add_argument('-x', required = True, metavar = 'index',
         help = 'Index of the genome for alignment tools')
-    parser.add_argument('-t', required = True, default = 'bowtie', metavar = 'Aligner',
+    parser.add_argument('-t', required = True, default = 'bowtie', 
+        metavar = 'Aligner',
         help = 'Aligner for the mapping, bowtie, bowtie2, STAR')
     parser.add_argument('-p', default = 1, metavar = 'Threads', type = int, 
         help = 'Number of threads to launch, default [1].')
@@ -89,31 +90,6 @@ def seq_type(path, top_n = 1000):
         return None
 
 
-def bam_merge(bam_ins, bam_out):
-    """
-    merge multiple bam files
-    input: list of bam files
-    input: out.bam
-    """
-    # check input files
-    bam_flag = []
-    for b in bam_ins:
-        if not os.path.exists(b) is True:
-            bam_flag.append(b)
-    if len(bam_flag) > 0:
-        sys.exit('BAM files not exists:' + '\n'.join(bam_flag))
-    # check output file
-    if os.path.exists(bam_out) is True:
-        pass
-        # sys.exit('BAM exists:' + bam_out)
-    else:
-        # merge
-        pysam.merge('-f', bam_out + '.unsorted.bam', *bam_ins) # overwrite output BAM
-        pysam.sort('-o', bam_out, bam_out + '.unsorted.bam')
-        pysam.index(bam_out)
-        os.remove(bam_out + '.unsorted.bam')
-        
-
 def aligner_index_validator(path, aligner = 'bowtie'):
     """validate the alignment index, bowtie, bowtie2, hisat2"""
     # bowtie index
@@ -125,195 +101,6 @@ def aligner_index_validator(path, aligner = 'bowtie'):
     else:
         return False
 
-
-def bowtie_map_se(read_in, align_index, out_path = None, *, para = 1, 
-                  multi_cores = 1):
-    """
-    mapping single read to one index using bowtie
-    Input: fastq|a
-    Output: bam (sorted), unmapped reads
-    """
-    aligner_index_validator(align_index, 'bowtie')
-    freader = 'zcat' if is_gz_file(read_in) else 'cat'
-    mypara = '-v 2 -m 1 --strata' if para == 1 else '-v 2 -k 100'# unique mapper
-    # # outdir exists
-    if out_path is None:
-        out_path = os.path.dirname(read_in)
-    if not os.path.exists(out_path):
-        os.makedirs(out_path)
-    ## 
-    read_type = seq_type(read_in)
-    if read_type is 'fasta':
-        mypara +=  ' -f'
-    elif seq_type(read_in) is 'fastq':
-        mypara +=  ' -q'
-    else:
-        raise Exception('unkown type of read file(s)')
-    ## filename
-    idx_prefix = os.path.basename(align_index)
-    read_prefix = os.path.basename(read_in) # remove *.nodup.clean    
-    read_prefix = re.sub('\.f[astq]+(.gz)?', '', read_prefix)
-    read_prefix = re.sub('\.clean|\.nodup|\.cut\-?\d+', '', read_prefix) #
-    read_unmap_name = '{}.unmapped.{}'.format(read_prefix, idx_prefix, read_type)
-    read_unmap = os.path.join(out_path, read_unmap_name)
-    bam_out = os.path.join(out_path, read_prefix + '.bam')
-    log_out = re.sub('.bam', '.log', bam_out)
-    ## skip exist files
-    if os.path.exists(bam_out) and os.path.exists(read_unmap):
-        logging.info('BAM file exists, mapping skipped...: ' + bam_out)
-    else:
-        c0 = '{} {}'.format(freader, read_in)
-        c1 = 'bowtie {} -p {} --mm --best --sam --no-unal --un {} {} {}'.\
-            format(mypara, multi_cores, read_unmap, align_index, read_in)
-        c2 = 'samtools view -bhS -F 4 -@ {} -'.format(multi_cores)
-        c3 = 'samtools sort -@ {} -'.format(multi_cores)
-        c4 = 'samtools index {}'.format(bam_out)
-        with open(bam_out, 'w') as fbam, open(log_out, 'w') as fo:
-            p0 = subprocess.Popen(shlex.split(c0), stdout = subprocess.PIPE)
-            p1 = subprocess.Popen(shlex.split(c1), stdin = p0.stdout, stdout = subprocess.PIPE, stderr = fo)
-            p2 = subprocess.Popen(shlex.split(c2), stdin = p1.stdout, stdout = subprocess.PIPE)
-            p3 = subprocess.Popen(shlex.split(c3), stdin = p2.stdout, stdout = fbam)
-            px = p3.communicate()
-            p4 = subprocess.run(shlex.split(c4)) # index
-        d = bowtie_log_parser(log_out)
-
-    return [bam_out, read_unmap]
-
-
-def bowtie2_map_se(read_in, align_index, out_path = None, *, para = 1, 
-                  multi_cores = 1):
-    """
-    mapping single read to one index using bowtie2
-    Input: fastq|a
-    Output: bam (sorted), unmapped reads
-    """
-    aligner_index_validator(align_index, 'bowtie2')
-    freader = 'zcat' if is_gz_file(read_in) else 'cat'
-    mypara = '--very-sensitive' if para == 1 else '--local'# unique mapper
-    # # outdir exists
-    if out_path is None:
-        out_path = os.path.dirname(read_in)
-    if not os.path.exists(out_path):
-        os.makedirs(out_path)
-    ## 
-    read_type = seq_type(read_in)
-    if read_type is 'fasta':
-        mypara +=  ' -f'
-    elif seq_type(read_in) is 'fastq':
-        mypara +=  ' -q'
-    else:
-        raise Exception('unkown type of read file(s)')
-    ## filename
-    idx_prefix = os.path.basename(align_index)
-    read_prefix = os.path.basename(read_in) # remove *.nodup.clean    
-    read_prefix = re.sub('\.f[astq]+(.gz)?', '', read_prefix)
-    read_prefix = re.sub('\.clean|\.nodup|\.cut\-?\d+', '', read_prefix) #
-    read_unmap_name = '{}.unmapped.{}'.format(read_prefix, idx_prefix, read_type)
-    read_unmap = os.path.join(out_path, read_unmap_name)
-    bam_out = os.path.join(out_path, read_prefix + '.bam')
-    log_out = re.sub('.bam', '.log', bam_out)
-    ## skip exist files
-    if os.path.exists(bam_out) and os.path.exists(read_unmap):
-        logging.info('BAM file exists, mapping skipped...: ' + bam_out)
-    else:
-        c0 = '{} {}'.format(freader, read_in)
-        c1 = 'bowtie {} -p {} --mm --best --sam --no-unal --un {} {} -'.\
-            format(mypara, multi_cores, read_unmap, align_index, read_in)
-        c2 = 'samtools view -bhS -F 4 -@ {} -'.format(multi_cores)
-        c3 = 'samtools sort -@ {} -'.format(multi_cores)
-        c4 = 'samtools index {}'.format(bam_out)
-        with open(bam_out, 'w') as fbam, open(log_out, 'w') as fo:
-            p0 = subprocess.Popen(shlex.split(c0), stdout = subprocess.PIPE)
-            p1 = subprocess.Popen(shlex.split(c1), stdin = p0.stdout, stdout = subprocess.PIPE, stderr = fo)
-            p2 = subprocess.Popen(shlex.split(c2), stdin = p1.stdout, stdout = subprocess.PIPE)
-            p3 = subprocess.Popen(shlex.split(c3), stdin = p2.stdout, stdout = fbam)
-            px = p3.communicate()
-            p4 = subprocess.run(shlex.split(c4)) # index
-        d = bowtie2_log_parser(log_out)
-
-    return [bam_out, read_unmap]
-
-
-def star_map_se(read_in, align_index, out_path = None, *, para = 1, 
-                multi_cores = 1):
-    """
-    mapping single read to one index using STAR
-    Input: fastq|a
-    Output: bam (sorted), unmapped reads
-    """
-    freader = 'zcat' if is_gz_file(read_in) else 'cat'
-    mypara = '--very-sensitive' if para == 1 else '--local'# unique mapper
-    # # outdir exists
-    if out_path is None:
-        out_path = os.path.dirname(read_in)
-    if not os.path.exists(out_path):
-        os.makedirs(out_path)
-    ## 
-    read_type = seq_type(read_in)
-    if read_type is 'fasta':
-        mypara +=  ' -f'
-    elif seq_type(read_in) is 'fastq':
-        mypara +=  ' -q'
-    else:
-        raise Exception('unkown type of read file(s)')
-    ## filename
-    read_prefix = re.sub('.gz$', '', os.path.basename(read_in))
-    read_prefix = os.path.splitext(read_prefix)[0]
-    read_prefix = re.sub('\.clean|\.nodup|\.cut\-?\d+', '', read_prefix) #
-    read_unmap_name = '{}.unmapped.{}'.format(read_prefix, read_type)
-    read_unmap = os.path.join(out_path, read_unmap_name)
-    bam_out = os.path.join(out_path, read_prefix + '.bam')
-    log_out = re.sub('.bam', '.log', bam_out)
-    ## skip exist files
-    if os.path.exists(bam_out) and os.path.exists(read_unmap):
-        logging.info('BAM file exists, mapping skipped...: ' + bam_out)
-    else:
-        c0 = 'STAR --genomeDir {} --readFilesIn {} \
-              --readFilesCommand {} --outFileNamePrefix {} \
-              --runThreadN {} '.format(
-                align_index, read_in, 
-                freader, os.path.splitext(bam_out)[0],
-                multi_cores)
-        c1 = c0 + '--runMode alignReads \
-             --limitOutSAMoneReadBytes 1000000 \
-             --genomeLoad LoadAndKeep \
-             --limitBAMsortRAM 10000000000 \
-             --outSAMtype BAM SortedByCoordinate \
-             --outReadsUnmapped Fastx \
-             --outFilterMismatchNoverLmax 0.05 \
-             --seedSearchStartLmax 20'
-        c2 = 'samtools index {}'.format(bam_out)
-        with open(bam_out, 'w') as fbam, open(log_out, 'w') as fo:
-            p1 = subprocess.run(shlex.split(c1), stdout = fo)
-            ## rename files
-            os.rename(os.path.splitext(bam_out)[0] + 'Aligned.sortedByCoord.out.bam', bam_out)
-            os.rename(os.path.splitext(bam_out)[0] + 'Unmapped.out.mate1', read_unmap)
-            os.rename(os.path.splitext(bam_out)[0] + 'Log.final.out', log_out)
-            ## make index
-            p2 = subprocess.run(shlex.split(c2))
-        d = star_log_parser(log_out)
-
-    return [bam_out, read_unmap]
-
-
-def pcr_dup_remover(bam_in):
-    """
-    remove PCR duplicates using Picard
-    """
-    picard_jar = '/data/biosoft/picard/build/libs/picard.jar'
-    if not os.path.exists(picard_jar):
-        logging.error('file not found - picard.jar')
-        return None
-    bam_nodup = os.path.splitext(bam_in)[0] + '.nodup.bam'
-    metrics_nodup = os.path.splitext(bam_in)[0] + '.nodup.metrics'
-    log_nodup = os.path.splitext(bam_in)[0] + '.nodup.log'
-    c1 = 'java -Xmx8g -jar {} MarkDuplicates INPUT={} OUTPUT={} METRICS_FILE={} \
-          REMOVE_DUPLICATES=true ASSUME_SORTED=true'.format(picard_jar, 
-          bam_in, bam_nodup, metrics_nodup)
-    if os.path.exists(bam_in) and not os.path.exists(bam_nodup):
-        with open(log_nodup, 'w') as fo:
-            p1 = subprocess.run(shlex.split(c1), stdout = fo, stderr = fo)
-    return bam_nodup
 
 
 ##############################
@@ -503,8 +290,9 @@ def merge_map_wrapper(fn, save = True):
     b_files = sorted(glob.glob(fn + '/*.bam'), key = len) # bam files
     b_prefix = os.path.basename(fn)
     df = pd.DataFrame(columns = ['name', 'group', 'read'])
-    #for b in b_files:
     for n in range(len(b_files)):
+        if not os.path.exists(b_files[n] + '.bai'):
+            pysam.index(b_files[n])
         b_cnt = pysam.AlignmentFile(b_files[n], 'rb').count()
         group = os.path.basename(b_files[n]).split('.')[-2] #
         group = re.sub('^map_', '', group)
@@ -519,6 +307,229 @@ def merge_map_wrapper(fn, save = True):
         except IOError:
             print('[failed] saving data to file: ' + save_csv)
     return df
+
+
+
+def bam_merge(bam_ins, bam_out):
+    """
+    merge multiple bam files
+    input: list of bam files
+    input: out.bam
+    """
+    # check input files
+    bam_flag = []
+    for b in bam_ins:
+        if not os.path.exists(b) is True:
+            bam_flag.append(b)
+    if len(bam_flag) > 0:
+        sys.exit('BAM files not exists:' + '\n'.join(bam_flag))
+    # check output file
+    if os.path.exists(bam_out) is True:
+        pass
+        # sys.exit('BAM exists:' + bam_out)
+    else:
+        # merge
+        pysam.merge('-f', bam_out + '.unsorted.bam', *bam_ins) # overwrite output BAM
+        pysam.sort('-o', bam_out, bam_out + '.unsorted.bam')
+        pysam.index(bam_out)
+        os.remove(bam_out + '.unsorted.bam')
+        
+
+
+def bowtie_map_se(read_in, align_index, out_path = None, *, para = 1, 
+                  multi_cores = 1):
+    """
+    mapping single read to one index using bowtie
+    Input: fastq|a
+    Output: bam (sorted), unmapped reads
+    """
+    aligner_index_validator(align_index, 'bowtie')
+    freader = 'zcat' if is_gz_file(read_in) else 'cat'
+    mypara = '-v 2 -m 1 --strata' if para == 1 else '-v 2 -k 100'# unique mapper
+    # # outdir exists
+    if out_path is None:
+        out_path = os.path.dirname(read_in)
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+    ## 
+    read_type = seq_type(read_in)
+    if read_type is 'fasta':
+        mypara +=  ' -f'
+    elif seq_type(read_in) is 'fastq':
+        mypara +=  ' -q'
+    else:
+        raise Exception('unkown type of read file(s)')
+    ## filename
+    idx_prefix = os.path.basename(align_index)
+    read_prefix = os.path.basename(read_in) # remove *.nodup.clean    
+    read_prefix = re.sub('\.f[astq]+(.gz)?', '', read_prefix)
+    read_prefix = re.sub('\.clean|\.nodup|\.cut\-?\d+', '', read_prefix) #
+    read_unmap_name = '{}.unmapped.{}'.format(read_prefix, idx_prefix, read_type)
+    read_unmap = os.path.join(out_path, read_unmap_name)
+    bam_out = os.path.join(out_path, read_prefix + '.bam')
+    log_out = re.sub('.bam', '.log', bam_out)
+    ## skip exist files
+    if os.path.exists(bam_out) and os.path.exists(read_unmap):
+        logging.info('BAM file exists, mapping skipped...: ' + bam_out)
+    else:
+        c0 = '{} {}'.format(freader, read_in)
+        c1 = 'bowtie {} -p {} --mm --best --sam --no-unal --un {} {} {}'.\
+            format(mypara, multi_cores, read_unmap, align_index, read_in)
+        c2 = 'samtools view -bhS -F 4 -@ {} -'.format(multi_cores)
+        c3 = 'samtools sort -@ {} -'.format(multi_cores)
+        # c4 = 'samtools index {}'.format(bam_out)
+        with open(bam_out, 'w') as fbam, open(log_out, 'w') as fo:
+            p0 = subprocess.Popen(shlex.split(c0), stdout = subprocess.PIPE)
+            p1 = subprocess.Popen(shlex.split(c1), stdin = p0.stdout, stdout = subprocess.PIPE, stderr = fo)
+            p2 = subprocess.Popen(shlex.split(c2), stdin = p1.stdout, stdout = subprocess.PIPE)
+            p3 = subprocess.Popen(shlex.split(c3), stdin = p2.stdout, stdout = fbam)
+            px = p3.communicate()
+        pysam.index(bam_out)
+        # p4 = subprocess.run(shlex.split(c4)) # index
+        d = bowtie_log_parser(log_out)
+
+    return [bam_out, read_unmap]
+
+
+def bowtie2_map_se(read_in, align_index, out_path = None, *, para = 1, 
+                  multi_cores = 1):
+    """
+    mapping single read to one index using bowtie2
+    Input: fastq|a
+    Output: bam (sorted), unmapped reads
+    """
+    aligner_index_validator(align_index, 'bowtie2')
+    freader = 'zcat' if is_gz_file(read_in) else 'cat'
+    mypara = '--very-sensitive' if para == 1 else '--local'# unique mapper
+    # # outdir exists
+    if out_path is None:
+        out_path = os.path.dirname(read_in)
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+    ## 
+    read_type = seq_type(read_in)
+    if read_type is 'fasta':
+        mypara +=  ' -f'
+    elif seq_type(read_in) is 'fastq':
+        mypara +=  ' -q'
+    else:
+        raise Exception('unkown type of read file(s)')
+    ## filename
+    idx_prefix = os.path.basename(align_index)
+    read_prefix = os.path.basename(read_in) # remove *.nodup.clean    
+    read_prefix = re.sub('\.f[astq]+(.gz)?', '', read_prefix)
+    read_prefix = re.sub('\.clean|\.nodup|\.cut\-?\d+', '', read_prefix) #
+    read_unmap_name = '{}.unmapped.{}'.format(read_prefix, idx_prefix, read_type)
+    read_unmap = os.path.join(out_path, read_unmap_name)
+    bam_out = os.path.join(out_path, read_prefix + '.bam')
+    log_out = re.sub('.bam', '.log', bam_out)
+    ## skip exist files
+    if os.path.exists(bam_out) and os.path.exists(read_unmap):
+        logging.info('BAM file exists, mapping skipped...: ' + bam_out)
+    else:
+        c0 = '{} {}'.format(freader, read_in)
+        c1 = 'bowtie {} -p {} --mm --best --sam --no-unal --un {} {} -'.\
+            format(mypara, multi_cores, read_unmap, align_index, read_in)
+        c2 = 'samtools view -bhS -F 4 -@ {} -'.format(multi_cores)
+        c3 = 'samtools sort -@ {} -'.format(multi_cores)
+        # c4 = 'samtools index {}'.format(bam_out)
+        with open(bam_out, 'w') as fbam, open(log_out, 'w') as fo:
+            p0 = subprocess.Popen(shlex.split(c0), stdout = subprocess.PIPE)
+            p1 = subprocess.Popen(shlex.split(c1), stdin = p0.stdout, stdout = subprocess.PIPE, stderr = fo)
+            p2 = subprocess.Popen(shlex.split(c2), stdin = p1.stdout, stdout = subprocess.PIPE)
+            p3 = subprocess.Popen(shlex.split(c3), stdin = p2.stdout, stdout = fbam)
+            px = p3.communicate()
+        # p4 = subprocess.run(shlex.split(c4)) # index
+        pysam.index(bam_out)
+        d = bowtie2_log_parser(log_out)
+
+    return [bam_out, read_unmap]
+
+
+def star_map_se(read_in, align_index, out_path = None, *, para = 1, 
+                multi_cores = 1):
+    """
+    mapping single read to one index using STAR
+    Input: fastq|a
+    Output: bam (sorted), unmapped reads
+    """
+    freader = 'zcat' if is_gz_file(read_in) else 'cat'
+    mypara = '--very-sensitive' if para == 1 else '--local'# unique mapper
+    # # outdir exists
+    if out_path is None:
+        out_path = os.path.dirname(read_in)
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+    ## 
+    read_type = seq_type(read_in)
+    if read_type is 'fasta':
+        mypara +=  ' -f'
+    elif seq_type(read_in) is 'fastq':
+        mypara +=  ' -q'
+    else:
+        raise Exception('unkown type of read file(s)')
+    ## filename
+    read_prefix = re.sub('.gz$', '', os.path.basename(read_in))
+    read_prefix = os.path.splitext(read_prefix)[0]
+    read_prefix = re.sub('\.clean|\.nodup|\.cut\-?\d+', '', read_prefix) #
+    read_unmap_name = '{}.unmapped.{}'.format(read_prefix, read_type)
+    read_unmap = os.path.join(out_path, read_unmap_name)
+    bam_out = os.path.join(out_path, read_prefix + '.bam')
+    log_out = re.sub('.bam', '.log', bam_out)
+    ## skip exist files
+    if os.path.exists(bam_out) and os.path.exists(read_unmap):
+        logging.info('BAM file exists, mapping skipped...: ' + bam_out)
+    else:
+        c0 = 'STAR --genomeDir {} --readFilesIn {} \
+              --readFilesCommand {} --outFileNamePrefix {} \
+              --runThreadN {} '.format(
+                align_index, read_in, 
+                freader, os.path.splitext(bam_out)[0],
+                multi_cores)
+        c1 = c0 + '--runMode alignReads \
+             --limitOutSAMoneReadBytes 1000000 \
+             --genomeLoad LoadAndKeep \
+             --limitBAMsortRAM 10000000000 \
+             --outSAMtype BAM SortedByCoordinate \
+             --outReadsUnmapped Fastx \
+             --outFilterMismatchNoverLmax 0.05 \
+             --seedSearchStartLmax 20'
+        # c2 = 'samtools index {}'.format(bam_out)
+        with open(bam_out, 'w') as fbam, open(log_out, 'w') as fo:
+            p1 = subprocess.run(shlex.split(c1), stdout = fo)
+            ## rename files
+            os.rename(os.path.splitext(bam_out)[0] + 'Aligned.sortedByCoord.out.bam', bam_out)
+            os.rename(os.path.splitext(bam_out)[0] + 'Unmapped.out.mate1', read_unmap)
+            os.rename(os.path.splitext(bam_out)[0] + 'Log.final.out', log_out)
+            ## make index
+        # p2 = subprocess.run(shlex.split(c2))
+        pysam.index(bam_out)
+        d = star_log_parser(log_out)
+
+    return [bam_out, read_unmap]
+
+
+def pcr_dup_remover(bam_in):
+    """
+    remove PCR duplicates using Picard
+    """
+    picard_jar = '/data/biosoft/picard/build/libs/picard.jar'
+    if not os.path.exists(picard_jar):
+        logging.error('file not found - picard.jar')
+        return None
+    bam_nodup = os.path.splitext(bam_in)[0] + '.nodup.bam'
+    metrics_nodup = os.path.splitext(bam_in)[0] + '.nodup.metrics'
+    log_nodup = os.path.splitext(bam_in)[0] + '.nodup.log'
+    c1 = 'java -Xmx8g -jar {} MarkDuplicates INPUT={} OUTPUT={} METRICS_FILE={} \
+          REMOVE_DUPLICATES=true ASSUME_SORTED=true'.format(picard_jar, 
+          bam_in, bam_nodup, metrics_nodup)
+    if os.path.exists(bam_in) and not os.path.exists(bam_nodup):
+        with open(log_nodup, 'w') as fo:
+            p1 = subprocess.run(shlex.split(c1), stdout = fo, stderr = fo)
+        pysam.index(bam_nodup)
+    return bam_nodup
+
+
 
 
 def map(fqs, smp_name, out_path, multi_cores, genome_index, 
