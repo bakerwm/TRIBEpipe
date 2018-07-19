@@ -275,7 +275,7 @@ def main():
                                          args.tribe_depth_cutoff, 
                                          args.tribe_pct_cutoff)
     else:
-        logging.error('unknonw -i tribe files')
+        raise ValueError('illegal tribe samples, -i:')
 
 
     logging.info('step 2. processing genomic DNA sample')
@@ -294,7 +294,8 @@ def main():
                                        args.gDNA_depth_cutoff, 
                                        args.gDNA_pct_cutoff)
     else:
-        logging.error('unknonw -gDNA files')
+        gDNA_edits = None
+        logging.error('gDNA skipped, -gDNA')
 
 
     logging.info('step 3. processing wildtype RNA-seq sample')
@@ -314,7 +315,8 @@ def main():
                                          args.wtRNA_depth_cutoff, 
                                          args.wtRNA_pct_cutoff)
     else:
-        logging.error('unknonw -wtRNA files')
+        wtRNA_edits = None
+        logging.error('wtRNA skipped, -wtRNA')
 
     logging.info('step 4. filtering TRIBE editing events')
     final_dir = os.path.join(args.o, 'TRIBE', 'edits_filted')
