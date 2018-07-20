@@ -123,15 +123,15 @@ def tribe_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut,
     ## Trimming
     tribe_trim_dir = os.path.join(outdir, 'input_reads')
     if trimmed:
+        logging.info('trimming skipped by --trimmed')
+        tribe_clean_fq = fqs
+    else:
         tribe_clean_fq = trim.trim(fqs = fqs, adapter3 = ad3,
                                  out_path = tribe_trim_dir, 
                                  len_min = len_min, 
                                  cut = cut, 
                                  multi_cores = threads,
                                  overwrite = False)
-    else:
-        logging.info('trimming skipped by --trimmed')
-        tribe_clean_fq = fqs
 
     ## Mapping
     tribe_map_dir = os.path.join(outdir, 'mapping')
@@ -168,6 +168,9 @@ def gDNA_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut,
     ## Trimming
     gDNA_trim_dir = os.path.join(outdir, 'input_reads')
     if trimmed:
+        logging.info('trimming skipped by --trimmed')
+        gDNA_clean_fq = fqs
+    else:
         gDNA_clean_fq = trim.trim(fqs = fqs, 
                                   adapter3 = ad3,
                                   out_path = gDNA_trim_dir, 
@@ -175,9 +178,7 @@ def gDNA_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut,
                                   cut = cut, 
                                   multi_cores = threads,
                                   overwrite = False)
-    else:
-        logging.info('trimming skipped by --trimmed')
-        gDNA_clean_fq = fqs
+    
 
     ## Mapping
     gDNA_map_dir = os.path.join(outdir, 'mapping')
@@ -213,6 +214,9 @@ def wtRNA_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut,
     ## Trimming
     wtRNA_trim_dir = os.path.join(outdir, 'input_reads')
     if trimmed:
+        logging.info('trimming skipped by --trimmed')
+        wtRNA_clean_fq = fqs
+    else:
         wtRNA_clean_fq = trim.trim(fqs = fqs, 
                                    adapter3 = ad3,
                                    out_path = wtRNA_trim_dir, 
@@ -220,9 +224,7 @@ def wtRNA_edits_parser(fqs, outdir, genome_fa, genome_index, ad3, len_min, cut,
                                    cut = cut, 
                                    multi_cores = threads,
                                    overwrite = False)
-    else:
-        logging.info('trimming skipped by --trimmed')
-        wtRNA_clean_fq = fqs
+    
         
     ## Mapping
     wtRNA_map_dir = os.path.join(outdir, 'mapping')
@@ -275,7 +277,6 @@ def main():
 
     ## prepare dir
     subdirs = [os.path.join(args.o, i) for i in ['TRIBE', 'gDNA', 'wtRNA']]
-
     ## extract edits
     logging.info('step 1. processing TRIBE samples')
     if isinstance(args.i, str):
