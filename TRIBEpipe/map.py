@@ -58,12 +58,12 @@ def get_args():
 
 
 ## functions
-def is_gz_file(filepath):
+def is_gz(filepath):
     with open(filepath, 'rb') as test_f:
         return binascii.hexlify(test_f.read(2)) == b'1f8b'
 
 
-def seq_type(path, top_n = 1000):
+def seq_type(path, top_n=1000):
     """
     Check the input file is FASTA or FASTQ format
     support only, squence in one line
@@ -74,8 +74,8 @@ def seq_type(path, top_n = 1000):
     if not isinstance(path, str):
         logging.info('only string accepted, error.')
         return None
-    f_reader = gzip.open if(is_gz_file(path)) else open
-    with f_reader(path, 'r') as f:
+    f_reader = gzip.open if(is_gz(path)) else open
+    with f_reader(path, 'rt') as f:
         for i, line in enumerate(f):
             if i > top_n:
                 break
@@ -400,7 +400,7 @@ def bowtie2_map_se(read_in, align_index, out_path = None, *, para = 1,
     Output: bam (sorted), unmapped reads
     """
     aligner_index_validator(align_index, 'bowtie2')
-    freader = 'zcat' if is_gz_file(read_in) else 'cat'
+    freader = 'zcat' if is_gz(read_in) else 'cat'
     mypara = '--very-sensitive' if para == 1 else '--local'# unique mapper
     # # outdir exists
     if out_path is None:
@@ -454,7 +454,7 @@ def star_map_se(read_in, align_index, out_path = None, *, para = 1,
     Input: fastq|a
     Output: bam (sorted), unmapped reads
     """
-    freader = 'zcat' if is_gz_file(read_in) else 'cat'
+    freader = 'zcat' if is_gz(read_in) else 'cat'
     mypara = '--very-sensitive' if para == 1 else '--local'# unique mapper
     # # outdir exists
     if out_path is None:
@@ -465,7 +465,7 @@ def star_map_se(read_in, align_index, out_path = None, *, para = 1,
     read_type = seq_type(read_in)
     if read_type is 'fasta':
         mypara +=  ' -f'
-    elif seq_type(read_in) is 'fastq':
+    elif read_type is 'fastq':
         mypara +=  ' -q'
     else:
         raise Exception('unkown type of read file(s)')
