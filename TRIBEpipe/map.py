@@ -16,9 +16,16 @@ __email__ = "wangm08@hotmail.com"
 __version__ = "0.1"
 
 
-import os, sys, re, datetime, json, glob
-import argparse, shlex, subprocess
-import numpy as np
+import os
+import sys
+import re
+# import datetime
+import json
+import glob
+import argparse
+import shlex
+import subprocess
+# import numpy as np
 import pandas as pd
 import binascii
 import pysam
