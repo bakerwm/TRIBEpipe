@@ -58,40 +58,40 @@ import logging
 import pysam
 
 
-logging.basicConfig(format = '[%(asctime)s] %(message)s', 
-                    datefmt = '%Y-%m-%d %H:%M:%S', 
-                    level = logging.DEBUG)
+logging.basicConfig(format='[%(asctime)s] %(message)s', 
+                    datefmt='%Y-%m-%d %H:%M:%S', 
+                    level=logging.DEBUG)
 
 def get_args():
     ## parsing arguments
     parser = argparse.ArgumentParser(
-        prog = 'edits_parser', description = 'Parsing TRIBE editing sites',
-        epilog = 'Output: ')
-    parser.add_argument('-t', default = 'RNA', choices = ['RNA', 'DNA'],
-        help = 'SNP type (RNA|DNA) for input BAM file, default: RNA')
-    parser.add_argument('-i', required = True, metavar = 'BAM', 
-        type = argparse.FileType('r'),
-        help = 'alignments in BAM format')
-    parser.add_argument('-g', required = True, metavar = 'Genome',
-        type = argparse.FileType('r'),
-        help = 'Reference sequence in FASTA format')
-    parser.add_argument('-o', required = True, metavar = 'OUTPUT',
-        help = 'file to save the results')    
-    parser.add_argument('--depth_cutoff', default = 2, type = int, 
-        metavar = 'depth',
-        help = 'minimum read depth at editing position, default: 1')
-    parser.add_argument('--pct_cutoff', default = 10, type = int,
-        metavar = 'percentage',
-        help = 'minimum editing percentage [1-100]%%, default: 10')
-    parser.add_argument('--overwrite', action = 'store_true',
-        help = 'if specified, overwrite existing file')
+        prog = 'edits_parser', description='Parsing TRIBE editing sites',
+        epilog='Output: ')
+    parser.add_argument('-t', default='RNA', choices=['RNA', 'DNA'],
+        help='SNP type (RNA|DNA) for input BAM file, default: RNA')
+    parser.add_argument('-i', required=True, metavar='BAM', 
+        type=argparse.FileType('r'),
+        help='alignments in BAM format')
+    parser.add_argument('-g', required=True, metavar='Genome',
+        type=argparse.FileType('r'),
+        help='Reference sequence in FASTA format')
+    parser.add_argument('-o', required=True, metavar='OUTPUT',
+        help='file to save the results')    
+    parser.add_argument('--depth_cutoff', default=2, type=int, 
+        metavar='depth',
+        help='minimum read depth at editing position, default: 1')
+    parser.add_argument('--pct_cutoff', default=10, type=int,
+        metavar='percentage',
+        help='minimum editing percentage [1-100]%%, default: 10')
+    parser.add_argument('--overwrite', action='store_true',
+        help='if specified, overwrite existing file')
     args = parser.parse_args()
     return args
 
 
 
-def mpileup2acgt(pileup, quality, depth, reference, qlimit = 53,
-                 noend = False, nostart = False):
+def mpileup2acgt(pileup, quality, depth, reference, qlimit=53,
+                 noend=False, nostart=False):
     """
     This function was written by Francesco Favero, 
     from: sequenza-utils pileup2acgt 
@@ -198,13 +198,13 @@ def mpileup2acgt(pileup, quality, depth, reference, qlimit = 53,
                         # ins_del = False
                         ins_del_length = 0
 
-    nucleot_dict['Z'] = [strand_dict['A'], strand_dict[
-        'C'], strand_dict['G'], strand_dict['T']]
+    nucleot_dict['Z'] = [strand_dict['A'], strand_dict['C'], strand_dict['G'], 
+                         strand_dict['T']]
     return nucleot_dict
 
 
 
-def rna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
+def rna_snp_filter(fs, depth_cutoff=1, pct_cutoff=10, strand='+'):
     """
     filt bases: count>depth_cutoff, pct>pct_cutoff
     fit: samtools pileup output
@@ -242,7 +242,7 @@ def rna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
     else:
     # elif strand == '+':
         if refbase == 'A' and fG >= pct_cutoff and nTotal >= depth_cutoff:
-            fHit = fT
+            fHit = fG
         else:
             return None
     ## for BED3 format
@@ -253,7 +253,7 @@ def rna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = '+'):
 
 
 
-def dna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = None):
+def dna_snp_filter(fs, depth_cutoff=1, pct_cutoff=10, strand=None):
     """
     DNA-sequencing, non-strand-specific
     forward strand:
@@ -323,8 +323,8 @@ def dna_snp_filter(fs, depth_cutoff, pct_cutoff, strand = None):
 
 
 
-def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna', 
-               depth_cutoff = 1, pct_cutoff = 10, append = False):
+def snp_parser(bam, genome_fa, out_file, strand='+', snp_type='rna', 
+               depth_cutoff=1, pct_cutoff=10, append=False):
     """
     extract nucleotide count table at each position
     """
@@ -360,10 +360,10 @@ def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna',
     # run commands
     c1 = 'samtools view {} -bhS {}'.format(flag, bam)
     c2 = 'samtools mpileup -a -d 100000 -AB --ff 4 -q 0 -Q 0 -s -f {} -'.format(genome_fa)
-    p1 = subprocess.Popen(shlex.split(c1), stdout = subprocess.PIPE)
-    p2 = subprocess.Popen(shlex.split(c2), stdin = p1.stdout, 
-                          stdout = subprocess.PIPE, stderr = subprocess.PIPE, 
-                          universal_newlines = True)
+    p1 = subprocess.Popen(shlex.split(c1), stdout=subprocess.PIPE)
+    p2 = subprocess.Popen(shlex.split(c2), stdin=p1.stdout, 
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                          universal_newlines=True)
     # parsing output
     with open(out_file, write_mode) as fo:
         while True:
@@ -375,13 +375,13 @@ def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna',
             if refbase == 'A' or refbase == 'T':
                 if depth >= depth_cutoff and depth_cutoff > 0:
                     acgt_res = mpileup2acgt(pileup, quality, depth, refbase, 
-                                            qlimit = 25, noend = False, 
-                                            nostart = False)
+                                            qlimit=25, noend=False, 
+                                            nostart=False)
                     f_out = [chr, pos, refbase, depth, acgt_res['A'], acgt_res['C'], 
                              acgt_res['G'], acgt_res['T']]
                     # filtering
                     f_out2 = snp_filter(f_out, depth_cutoff, pct_cutoff, 
-                                        strand = strand)
+                                        strand=strand)
                     if not f_out2 is None:
                         fo.write('\t'.join(list(map(str, f_out2))) + '\n')
     return True
@@ -389,26 +389,26 @@ def snp_parser(bam, genome_fa, out_file, strand = '+', snp_type = 'rna',
 
 
 def edits_parser(bam, genome_fa, outfile, snp_type, depth_cutoff, pct_cutoff,
-                 overwrite = False):
+                 overwrite=False):
     logging.info('calling edits')
     if os.path.exists(outfile) and overwrite is False:
         logging.info('edits file exists, skipping: ' + outfile)
     else:
         try:
             if snp_type.lower() == 'dna':
-                snp_parser(bam, genome_fa, outfile, strand = '*', 
-                           snp_type = snp_type, depth_cutoff = depth_cutoff, 
-                           pct_cutoff = pct_cutoff)
+                snp_parser(bam, genome_fa, outfile, strand='*', 
+                           snp_type=snp_type, depth_cutoff=depth_cutoff, 
+                           pct_cutoff=pct_cutoff)
             elif snp_type.lower() == 'rna':
-                snp_parser(bam, genome_fa, outfile, strand = '+', 
-                           snp_type = snp_type, depth_cutoff = depth_cutoff, 
-                           pct_cutoff = pct_cutoff)
+                snp_parser(bam, genome_fa, outfile, strand='+', 
+                           snp_type=snp_type, depth_cutoff=depth_cutoff, 
+                           pct_cutoff=pct_cutoff)
                 # reverse strand
-                snp_parser(bam, genome_fa, outfile, strand = '-', 
-                           snp_type = snp_type, depth_cutoff = depth_cutoff, 
-                           pct_cutoff = pct_cutoff, append = True)
+                snp_parser(bam, genome_fa, outfile, strand='-', 
+                           snp_type=snp_type, depth_cutoff=depth_cutoff, 
+                           pct_cutoff=pct_cutoff, append=True)
             else:
-                logging.info('unknown type of snp:' + snp_type)
+                logging.info('unknown type of snp: %s' % snp_type)
         except IOError:
             logging.info('fail to call edits')
     return outfile
@@ -420,7 +420,7 @@ def main():
     assert args.depth_cutoff > 0
     assert args.pct_cutoff >= 0 and args.pct_cutoff <= 100
     edits_parser(args.i.name, args.g.name, args.o, args.t, args.depth_cutoff,
-                 args.pct_cutoff, overwrite = args.overwrite)
+                 args.pct_cutoff, overwrite=args.overwrite)
 
 if __name__ == '__main__':
     main()

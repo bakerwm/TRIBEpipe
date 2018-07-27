@@ -3,7 +3,6 @@
 import os
 import sys
 import re
-# import datetime
 import json
 import glob
 import argparse
@@ -15,6 +14,21 @@ import binascii
 import pysam
 import logging
 import gzip
+import pathlib
+
+
+##
+def xopen(fn, mode='r', bgzip=False):
+    """
+    Read / Write regular and gzip file, also support stdin
+    """
+    assert isinstance(fn, str)
+    if fn == '-':
+        return sys.stdin if 'r' in mode else sys.stdout
+    if fn.endswith('.gz') and mode.startswith('w') or is_gz(fn):
+        return gzip.open(fn, mode)
+    else:
+        return open(fn, mode)
 
 
 
@@ -24,24 +38,42 @@ def is_gz(filepath):
         return binascii.hexlify(test_f.read(2)) == b'1f8b'
 
 
-def seq_type(path, top_n=1000):
+def is_path(path, create = True):
     """
-    Check the input file is FASTA or FASTQ format
-    support only, squence in one line
-    extract the first 1000 lines
-    '>' is fasta, '@' is fastq, 'others' is None
+    Check path, whether a directory or not
+    if not, create it
     """
+    assert isinstance(path, str)
+    if os.path.exists(path):
+        return True
+    else:
+        if create:
+            try:
+                os.makedirs(path)
+                return True
+            except IOError:
+                logging.error('failed to create directories: %s' % path)
+        else:
+            return False
+
+
+def seq_type(fn, top_n = 1000):
+    """
+    Check the top 1000 rows of fn
+    identify @ for fastq, > for fasta, * unknown
+    """
+    assert isinstance(fn, str)
     tag = set()
-    if not isinstance(path, str):
-        logging.info('only string accepted, error.')
-        return None
-    f_reader = gzip.open if(is_gz(path)) else open
-    with f_reader(path, 'rt') as f:
-        for i, line in enumerate(f):
+    with xopen(fn, 'rt') as fi:
+        for i, line in enumerate(fi):
             if i > top_n:
                 break
             elif i % 4 == 0:
-                tag.add(line[0])
+                b = line[0] # the first base
+                if b.lower() in 'acgtn':
+                    continue
+                else:
+                    tag.add(line[0])
             else:
                 continue
     if tag ==  {'@'}:
@@ -50,6 +82,130 @@ def seq_type(path, top_n=1000):
         return 'fasta'
     else:
         return None
+
+
+def is_fastq(fn):
+    if seq_type(fn) == 'fastq':
+        return True
+    else:
+        return False
+
+
+def is_fasta(fn):
+    if seq_type(fn) == 'fasta':
+        return True
+    else:
+        return False
+
+
+def str_common(strList, suffix = False):
+    # extract longest prefix/suffix from list of strings
+    # default: prefix
+    # sort strings by len
+    def iterStop(exp):
+        if exp is False:
+            raise StopIteration
+        else:
+            return True    
+
+    def commonPrefix(s1, s2):
+        # prefix
+        return ''.join(list(val for i, val in enumerate(s1) 
+                       if iterStop(s2[i] is val)))
+
+    def fact(l):
+        if len(l) ==  1:
+            return l[0]
+        else:
+            la = l[0:2]
+            lb = l[2:]
+            s = commonPrefix(la[0], la[1])
+            lb.insert(0, s)
+            return fact(lb)
+
+    ## empty or single item 
+    if len(strList) ==  0:
+        return ''
+    elif len(strList) ==  1:
+        return strList[0]
+    else:
+        ## save a copy of list
+        L2 = sorted(strList, key = len)
+        c = fact(L2)
+    
+    ## suffix, reverse strings
+    if suffix is True:
+        L2 = [i[::-1] for i in L2]
+        c = fact(L2)
+        c = c[::-1]
+
+    return c # string 0-index
+
+
+def file_prefix(fn, with_path = False):
+    """
+    extract the prefix of a file
+    remove extensions
+    .gz, .fq.gz
+    """
+    assert isinstance(fn, str)
+    p1 = os.path.splitext(fn)[0]
+    px = os.path.splitext(fn)[1]
+    if px.endswith('gz') or px.endswith('.bz'):
+        px = os.path.splitext(p1)[1] + px
+        p1 = os.path.splitext(p1)[0]
+    if not with_path:
+        p1 = os.path.basename(p1)
+    return [p1, px]
+
+
+def rm_suffix1(fn):
+    """
+    simplify the name of bam files
+    from: {name}.not_{}.not_{}.....map_{}
+    to: {name}
+    """
+    if '.' in fn:
+        p = os.path.splitext(fn)[0]
+        px = os.path.splitext(fn)[1]
+        if px.startswith('.not_') or px.startswith('.map_'):
+            return rm_suffix1(p)
+        else:
+            return fn
+    else:
+        return fn
+        
+
+def filename_shorter(fn, with_path=False):
+    """
+    input: name1.not_spikein.not_mtrRNA.map_genome.bam 
+           name2.not_spikein.not_mtrRNA.map_genome.bam
+    output: name1.bam
+            name2.bam
+    """
+    p1 = os.path.splitext(fn)[0]
+    px = os.path.splitext(fn)[1]
+    p2 = rm_suffix1(p1)
+    if not with_path:
+        p2 = os.path.basename(p2)
+    return p2 + px
+
+
+def file_row_counter(fn):
+    """
+    count the file rows
+    count '\n' 
+    from @glglgl on stackoverflow, modified
+    https://stackoverflow.com/a/9631635/2530783
+    """
+    def blocks(files, size = 1024 * 1024):
+        while True:
+            b = files.read(size)
+            if not b: break
+            yield b
+    freader = gzip.open if is_gz(fn) else open
+    with freader(fn, 'rt', encoding="utf-8", errors='ignore') as fi:
+        return sum(bl.count('\n') for bl in blocks(fi))
 
 
 def is_idx(path, aligner='bowtie'):
@@ -216,6 +372,7 @@ def merge_map_wrapper(path, save=True):
     merge_prefix = os.path.basename(path)
     df = pd.DataFrame(columns=['name', 'group', 'read'])
     bam_files = [f for f in bam_files if not os.path.islink(f)]
+    bam_files = [f for f in bam_files if not f.endswith('nodup.bam')]
     # iterate
     for n in range(len(bam_files)):
         b_cnt = pysam.AlignmentFile(bam_files[n], 'rb').count()
@@ -257,4 +414,109 @@ def bam_merge(bam_ins, bam_out):
         pysam.sort('-o', bam_out, bam_out + '.unsorted.bam')
         pysam.index(bam_out)
         os.remove(bam_out + '.unsorted.bam')
+
+
+class Genome_info():
+    """
+    including the information of genome
+    index, annotation, ...
+    """
+
+    def __init__(self, genome, **kwargs):
+        assert isinstance(genome, str)
+        self.kwargs = kwargs
+        self.kwargs['genome'] = genome
+        if not 'path_data' in kwargs:
+            self.kwargs['path_data'] = os.path.join(pathlib.Path.home(), 
+                                                    'data', 'genome')
+        
+
+    def get_fa(self):
+        genome = self.kwargs['genome']
+        path_data = self.kwargs['path_data']
+        gfa = os.path.join(path_data, genome, 'bigZips', genome + '.fa')
+        assert os.path.exists(gfa)
+        return gfa
+
+
+    def get_fasize(self):
+        genome = self.kwargs['genome']
+        path_data = self.kwargs['path_data']
+        gsize = os.path.join(path_data, genome, 'bigZips', genome + '.chrom.sizes')
+        assert os.path.exists(gsize)
+        return gsize
+
+
+    def bowtie_index(self):
+        genome = self.kwargs['genome']
+        path_data = self.kwargs['path_data']
+        return idx_picker(genome, path_data=path_data, aligner='bowtie')
+
+
+    def bowtie2_index(self):
+        genome = self.kwargs['genome']
+        path_data = self.kwargs['path_data']
+        return idx_picker(genome, path_data=path_data, aligner='bowtie2')
+
+
+    def hisat2_index(self):
+        genome = self.kwargs['genome']
+        path_data = self.kwargs['path_data']
+        return idx_picker(genome, path_data=path_data, aligner='hisat2')
+
+
+    def star_index(self):
+        genome = self.kwargs['genome']
+        path_data = self.kwargs['path_data']
+        return idx_picker(genome, path_data=path_data, aligner='star')
+
+
+    def phylop100(self):
+        """
+        only support hg19
+        """
+        genome = self.kwargs['genome']
+        path_data = self.kwargs['path_data']
+        phylop100 = os.path.join(self.kwargs['path_data'],
+                            genome, 'phyloP100way', 
+                            genome + '.100way.phyloP100way.bw')
+        if not os.path.exists(phylop100):
+            phylop100 = None
+        return phylop100
+
+        
+    def gene_bed(self):
+        genome = self.kwargs['genome']
+        path_data = self.kwargs['path_data']
+        gbed = os.path.join(path_data, 
+                            genome,
+                            'annotation_and_repeats', 
+                            genome + '.refseq.bed')
+        if not os.path.exists(gbed):
+            gbed = None
+        return gbed
+
+
+    def gene_rmsk(self):
+        genome = self.kwargs['genome']
+        path_data = self.kwargs['path_data']
+        grmsk= os.path.join(path_data, 
+                            genome,
+                            'annotation_and_repeats', 
+                            genome + '.rmsk.bed')
+        if not os.path.exists(grmsk):
+            grmsk = None
+        return grmsk
+
+
+    def ensembl_gtf(self):
+        genome = self.kwargs['genome']
+        path_data = self.kwargs['path_data']
+        ggtf = os.path.join(path_data, 
+                            genome,
+                            'annotation_and_repeats', 
+                            genome + '.ensembl.gtf')
+        if not os.path.exists(ggtf):
+            ggtf = None
+        return ggtf
 
