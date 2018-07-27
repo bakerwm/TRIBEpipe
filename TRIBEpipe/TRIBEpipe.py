@@ -46,7 +46,7 @@ import shlex, subprocess, pathlib
 import pysam
 import logging
 from TRIBEpipe import trim
-from TRIBEpipe import map
+from TRIBEpipe import alignment
 from TRIBEpipe import edits_parser
 from TRIBEpipe import edits_filter
 from TRIBEpipe.helper import *
@@ -141,15 +141,14 @@ def tribe_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
                                    cut = cut, 
                                    multi_cores = threads,
                                    overwrite = False)
-def map(fns, smp_name, path_out, genome, spikein=None, multi_cores=1, 
-        aligner='bowtie2', path_data=None, overwrite=False):
+
     ## Mapping
     tribe_map_dir = os.path.join(outdir, 'mapping')
     # tribe_map_bam = []
     merge_name = str_common([os.path.basename(f) for f in tribe_clean_fq])
     merge_name = re.sub(".rep|_rep", "", merge_name)
     if merge is True:
-        b = map.map(tribe_clean_fq, merge_name, tribe_map_dir, 
+        b = alignment.align(tribe_clean_fq, merge_name, tribe_map_dir, 
                     genome, multi_cores=threads, aligner = 'STAR', 
                     path_data = path_data, overwrite = overwrite)
         if rm_dup is True:
@@ -158,7 +157,7 @@ def map(fns, smp_name, path_out, genome, spikein=None, multi_cores=1,
             tribe_map_bam = b
     else:
         for fq in tribe_clean_fq:       
-            b = map.map([fq], merge_name, tribe_map_dir, genome, 
+            b = alignment.align([fq], merge_name, tribe_map_dir, genome, 
                         multi_cores=threads, aligner = 'STAR', 
                         path_data = path_data, overwrite = overwrite)
             if rm_dup is True:
@@ -206,13 +205,13 @@ def gDNA_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
     merge_name = str_common([os.path.basename(f) for f in gDNA_clean_fq])
     merge_name = re.sub(".rep|_rep", "", merge_name)
     if merge is True:
-        b = map.map(gDNA_clean_fq, merge_name, gDNA_map_dir, 
-                    genome, multi_cores=threads, aligner = 'STAR', 
+        b = alignment.align(gDNA_clean_fq, merge_name, gDNA_map_dir, genome, 
+                    multi_cores=threads, aligner = 'STAR', 
                     path_data = path_data, overwrite = overwrite)
         gDNA_map_bam.append(b[-1])
     else:
         for fq in gDNA_clean_fq:
-            b = map.map([fq], merge_name, gDNA_map_dir, genome, 
+            b = alignment.align([fq], merge_name, gDNA_map_dir, genome, 
                         multi_cores=threads, aligner = 'STAR', 
                         path_data = path_data, overwrite = overwrite)
             gDNA_map_bam.append(b)
@@ -257,8 +256,8 @@ def wtRNA_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
     merge_name = str_common([os.path.basename(f) for f in wtRNA_clean_fq])
     merge_name = re.sub(".rep|_rep", "", merge_name)
     if merge is True:
-        b = map.map(wtRNA_clean_fq, merge_name, wtRNA_map_dir, 
-                    genome, multi_cores=threads, aligner = 'STAR', 
+        b = alignment.align(wtRNA_clean_fq, merge_name, wtRNA_map_dir, genome, 
+                    multi_cores=threads, aligner = 'STAR', 
                     path_data = path_data, overwrite = overwrite)
         if rm_dup is True:
             tribe_map_bam = [map.pcr_dup_remover(i) for i in b]
@@ -266,7 +265,7 @@ def wtRNA_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
             wtRNA_map_bam = b
     else:
         for fq in wtRNA_clean_fq:
-            b = map.map([fq], merge_name, wtRNA_map_dir, genome, 
+            b = alignment.align([fq], merge_name, wtRNA_map_dir, genome, 
                         multi_cores=threads, aligner = 'STAR', 
                         path_data = path_data, overwrite = overwrite)
             if rm_dup is True:

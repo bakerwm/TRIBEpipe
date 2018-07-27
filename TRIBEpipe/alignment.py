@@ -163,8 +163,11 @@ def star_se(fn, idx, path_out, para=1, multi_cores=1, overwrite=False):
     if os.path.exists(fn_map_bam) and overwrite is False:
         logging.info('file exists: %s' % fn_map_bam)
     else:
-        c1 = 'STAR --runMode alignReads --genomeDir %s --readFilesIn %s \
-              --readFilesCommand %s --outFileNamePrefix %s \
+        c1 = 'STAR --runMode alignReads \
+              --genomeDir %s \
+              --readFilesIn %s \
+              --readFilesCommand %s \
+              --outFileNamePrefix %s \
               --runThreadN %s \
               --limitOutSAMoneReadBytes 1000000 \
               --genomeLoad LoadAndKeep \
@@ -239,7 +242,7 @@ def pcr_dup_remover(bam_in):
 
 
 
-def map(fns, smp_name, path_out, genome, spikein=None, multi_cores=1, 
+def align(fns, smp_name, path_out, genome, spikein=None, multi_cores=1, 
         aligner='bowtie2', path_data=None, overwrite=False):
     """
     mapping reads to multiple indexes, one-by-one
