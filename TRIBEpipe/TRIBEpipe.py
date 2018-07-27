@@ -77,6 +77,8 @@ def get_args():
     parser.add_argument('--trimmed', action='store_true',
         help = 'if specified, do not run trimming, input fastq files are \
         supposed to be clean')
+    parser.add_argument('--rm_dup', action='store_true',
+        help = 'if specified, remove PCR duplicates')
     parser.add_argument('--tribe_depth_cutoff', default = 20, type = int, 
         metavar = 'tribe_depth',
         help = 'minimum read depth at editing position for tribe samples, \
@@ -110,9 +112,6 @@ def get_args():
         at right of read default: 0')
     parser.add_argument('--threads', metavar = 'Threads', type = int, default = 1,
         help = 'number of threads to use for the pipeline, default: 1')
-    parser.add_argument('--genome_data', metavar = 'genome_data', default = None,
-        help = 'specify the directory contains genome data, eg: fasta, gtf, index \
-        default: [$HOME/data/genome/]')
     parser.add_argument('--path_data', 
         help='The directory of genome files, default: \
         [$HOME/data/genome/]')
@@ -125,7 +124,8 @@ def get_args():
 
 def tribe_edits_parser(fqs, outdir, genome, ad3, len_min, cut, 
                        threads, depth_cutoff, pct_cutoff, merge = True, 
-                       trimmed = False, path_data = None, overwrite = False):
+                       trimmed = False, rm_dup=True, path_data = None, 
+                       overwrite = False):
     """extract editing events from TRIBE samples"""
     genome_fa = Genome_info(genome).get_fa()
 
@@ -144,20 +144,26 @@ def tribe_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
 
     ## Mapping
     tribe_map_dir = os.path.join(outdir, 'mapping')
-    tribe_map_bam = []
+    # tribe_map_bam = []
     merge_name = str_common([os.path.basename(f) for f in tribe_clean_fq])
     merge_name = re.sub(".rep|_rep", "", merge_name)
     if merge is True:
         b = map.map(tribe_clean_fq, merge_name, tribe_map_dir, 
                     genome, threads, aligner = 'STAR', 
                     path_data = path_data, overwrite = overwrite)
-        tribe_map_bam = [map.pcr_dup_remover(i) for i in b]
+        if rm_dup is True:
+            tribe_map_bam = [map.pcr_dup_remover(i) for i in b]
+        else:
+            tribe_map_bam = b
     else:
         for fq in tribe_clean_fq:       
             b = map.map([fq], merge_name, tribe_map_dir, genome, threads,
                         aligner = 'STAR', path_data = path_data,
                         overwrite = overwrite)
-            bx = map.pcr_dup_remover(b[0])
+            if rm_dup is True:
+                bx = map.pcr_dup_remover(b[0])
+            else:
+                bx = b[0]
             tribe_map_bam.append(bx)
 
     ## extract edits
@@ -226,7 +232,8 @@ def gDNA_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
 
 def wtRNA_edits_parser(fqs, outdir, genome, ad3, len_min, cut, 
                        threads, depth_cutoff, pct_cutoff, merge = True,
-                       trimmed = False, path_data = None, overwrite = False):
+                       trimmed = False, rm_dup=True,
+                       path_data = None, overwrite = False):
     """extract editing events from genomic DNA-seq sample"""
     genome_fa = Genome_info(genome).get_fa()
     ## Trimming
@@ -245,20 +252,26 @@ def wtRNA_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
 
     ## Mapping
     wtRNA_map_dir = os.path.join(outdir, 'mapping')
-    wtRNA_map_bam = []
+    # wtRNA_map_bam = []
     merge_name = str_common([os.path.basename(f) for f in wtRNA_clean_fq])
     merge_name = re.sub(".rep|_rep", "", merge_name)
     if merge is True:
         b = map.map(wtRNA_clean_fq, merge_name, wtRNA_map_dir, 
                     genome, threads, aligner = 'STAR', 
                     path_data = path_data, overwrite = overwrite)
-        wtRNA_map_bam = [map.pcr_dup_remover(i) for i in b]
+        if rm_dup is True:
+            tribe_map_bam = [map.pcr_dup_remover(i) for i in b]
+        else:
+            wtRNA_map_bam = b
     else:
         for fq in wtRNA_clean_fq:
             b = map.map([fq], merge_name, wtRNA_map_dir, genome, threads,
                         aligner = 'STAR', path_data = path_data,
                         overwrite = overwrite)
-            bx = map.pcr_dup_remover(b[0])
+            if rm_dup is True:
+                bx = map.pcr_dup_remover(b[0])
+            else:
+                bx = b[0]
             wtRNA_map_bam.append(bx)
     
     ## extract edits
@@ -293,6 +306,7 @@ def main():
                                          args.tribe_depth_cutoff, 
                                          args.tribe_pct_cutoff,
                                          trimmed = args.trimmed,
+                                         rm_dup = args.rm_dup,
                                          path_data = args.path_data,
                                          overwrite = args.overwrite)
     elif isinstance(args.i, list):
@@ -303,6 +317,7 @@ def main():
                                          args.tribe_depth_cutoff, 
                                          args.tribe_pct_cutoff,
                                          trimmed = args.trimmed,
+                                         rm_dup = args.rm_dup,
                                          path_data = args.path_data,
                                          overwrite = args.overwrite)
     else:
@@ -344,6 +359,7 @@ def main():
                                          args.wtRNA_depth_cutoff, 
                                          args.wtRNA_pct_cutoff,
                                          trimmed = args.trimmed,
+                                         rm_dup = args.rm_dup,
                                          path_data = args.path_data,
                                          overwrite = args.overwrite)
     elif isinstance(args.wtRNA, list):
@@ -355,6 +371,7 @@ def main():
                                          args.wtRNA_depth_cutoff, 
                                          args.wtRNA_pct_cutoff,
                                          trimmed = args.trimmed,
+                                         rm_dup = args.rm_dup,
                                          path_data = args.path_data,
                                          overwrite = args.overwrite)
     else:
