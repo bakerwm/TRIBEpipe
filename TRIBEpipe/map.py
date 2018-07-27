@@ -19,18 +19,17 @@ __version__ = "0.1"
 import os
 import sys
 import re
-# import datetime
 import json
 import glob
 import argparse
 import shlex
 import subprocess
-# import numpy as np
 import pandas as pd
 import binascii
-import pysam
 import logging
 import gzip
+import pysam
+import pybedtools
 from TRIBEpipe.helper import *
 
 logging.basicConfig(format = '[%(asctime)s] %(message)s', 
@@ -61,8 +60,15 @@ def get_args():
         help = 'Number of threads to launch, default [1].')
     parser.add_argument('--rmdup', action = 'store_true',
         help = 'remove PCR duplicates using Picard, if specified')
+    parser.add_argument('--path_data', 
+        help='The directory of genome files, default: \
+        [$HOME/data/genome/]')
+    parser.add_argument('--overwrite', action='store_true',
+        help='if spcified, overwrite exists file')
     args = parser.parse_args()
     return args
+
+
 
 def bowtie2_se(fn, idx, path_out, para=1, multi_cores=1, overwrite=False):
     """
@@ -78,9 +84,9 @@ def bowtie2_se(fn, idx, path_out, para=1, multi_cores=1, overwrite=False):
     para_v = {1: '--sensitive', 2: '--local'}
     para_bowtie2 = para_v[para] if para in para_v else ''
     fn_type = seq_type(fn)
-    if seq_type(fn) == 'fasta':
+    if fn_type == 'fasta':
         para_bowtie2 += ' -f'
-    elif seq_type(fn) == 'fastq':
+    elif fn_type == 'fastq':
         para_bowtie2 += ' -q'
     else:
         raise ValueError('unknown type of reads')
@@ -141,6 +147,8 @@ def star_se(fn, idx, path_out, para=1, multi_cores=1, overwrite=False):
     assert is_idx(idx, 'star')
     path_out = os.path.dirname(fn) if path_out is None else path_out
     assert is_path(path_out)
+    fn_type = seq_type(fn)
+    freader = 'zcat' if is_gz(fn) else '-'
     ## prefix
     fn_prefix = file_prefix(fn)[0]
     fn_prefix = re.sub('\.clean|\.nodup|\.cut', '', fn_prefix)
@@ -177,7 +185,9 @@ def star_se(fn, idx, path_out, para=1, multi_cores=1, overwrite=False):
     return [fn_map_bam, fn_unmap_file]
 
 
-def map_se_batch(fn, idxes, path_out, para=1, multi_cores=1, overwrite=False):
+
+def map_se_batch(fn, idxes, path_out, para=1, multi_cores=1, aligner='STAR', 
+                 overwrite=False):
     """
     mapping fastq to multiple indexes
     """
@@ -186,15 +196,21 @@ def map_se_batch(fn, idxes, path_out, para=1, multi_cores=1, overwrite=False):
     assert isinstance(idxes, list)
     path_out = os.path.dirname(fn) if path_out is None else path_out
     assert is_path(path_out)
+    if aligner.lower() == 'star':
+        align_se = star_se
+    elif aligner.lower() == 'bowtie2':
+        align_se = bowtie2_se
+    else:
+        raise ValueError('unknown aligner: %s' % aligner)
     # iterate index
     fn_bam_files = []
     fn_input = fn
     for idx in idxes:
         para = 2 if idx is idxes[-1] else para
-        fn_bam_idx, fn_unmap_idx = bowtie_se(fn_input, idx, path_out, 
-                                             para=para,
-                                             multi_cores=multi_cores,
-                                             overwrite=overwrite)
+        fn_bam_idx, fn_unmap_idx = align_se(fn_input, idx, path_out, 
+                                            para=para,
+                                            multi_cores=multi_cores,
+                                            overwrite=overwrite)
         fn_input = fn_unmap_idx
         fn_bam_files.append(fn_bam_idx)
     return fn_bam_files
@@ -233,9 +249,11 @@ def map(fns, smp_name, path_out, genome, spikein=None, multi_cores=1,
     assert isinstance(smp_name, str)
 
     # get indexes
-    sp = idx_picker(spikein, path_data=path_data, aligner='bowtie2') # 
-    sg = idx_grouper(genome, path_data=path_data, aligner='bowtie2') #
-    idxes = sg if spikein == genome else [sp] + sg
+    sg = idx_picker(genome, path_data=path_data, aligner=aligner)
+    idxes = [sg]
+    if isinstance(spikein, str) and not spikein == genome:
+        sp = idx_picker(spikein, path_data=path_data, aligner=aligner) # 
+        idxes.append(sp)
     idxes = list(filter(None.__ne__, idxes)) # idxes
     if len(idxes) == 0:
         raise ValueError('genome index not exists: ' + path_data)
@@ -301,7 +319,7 @@ def map(fns, smp_name, path_out, genome, spikein=None, multi_cores=1,
             os.symlink(os.path.basename(bed_from), bed_to)
         gbed_files.append(bed_to)
 
-    return [gbam_files, gbed_files]
+    return gbam_files # [gbam_files, gbed_files]
 
 
 def main():
@@ -319,11 +337,11 @@ def main():
     p = map(fqs, smp_name, path_out, genome, 
         multi_cores=multi_cores, aligner=aligner, 
         path_data=path_data, overwrite=overwrite)
-    p_out = p[0] # bam files
+    p_out = p # bam files
     if args.rmdup:
         px = []
         # remove dup
-        for b in p[0]:
+        for b in p:
             x = pcr_dup_remover(b)
             px.append(x)
         p_out = px
