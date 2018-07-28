@@ -170,7 +170,7 @@ def star_se(fn, idx, path_out, para=1, multi_cores=1, overwrite=False):
               --outFileNamePrefix %s \
               --runThreadN %s \
               --limitOutSAMoneReadBytes 1000000 \
-              --genomeLoad LoadAndKeep \
+              --genomeLoad LoadAndRemove \
               --limitBAMsortRAM 10000000000 \
               --outSAMtype BAM SortedByCoordinate \
               --outReadsUnmapped Fastx \

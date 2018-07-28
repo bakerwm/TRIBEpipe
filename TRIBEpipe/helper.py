@@ -249,6 +249,45 @@ def idx_picker(genome, group='genome', path_data=None, aligner='bowtie'):
 ##############################
 ## wrapper results          ##
 ##############################
+## wrapper functions for cutadapt ##
+def cutadapt_log_parser(log):
+    """
+    Parsing the output of cutadpat
+    support multiple run output
+    save data in JSON format
+    """
+    logdict = {}
+    _cutadapt_ver = []
+    _python_ver = []
+    _cmd = []
+    _fname = []
+    _raw = []
+    _clean = []
+    outfile = os.path.splitext(log)[0] + ".json"
+    with open(log, 'r') as f:
+        for line in f.readlines():
+            if(len(re.findall('^This is cutadapt', line)) == 1):
+                r1 = re.findall(r'(cutadapt|Python) (\d+\.\d+\.?\d+?)', line) # 1st line, tools
+                for i in r1: logdict[i[0]] = i[1]
+            elif('Command line parameters' in line):
+                _cmd.append(re.sub(r'Command line parameters: ', '', line).strip('\n'))
+                _fname.append(os.path.basename(line.split()[-1])) # file name
+            elif('Total reads processed:' in line):
+                 _raw.append(re.sub(r',', '', line.split()[-1])) # first input
+            elif('Reads written (passing filters):' in line):
+                 _clean.append(re.sub(r',', '', line.split()[-2])) # output
+            else:
+                 continue
+    logdict['filename'] = _fname[0]
+    logdict['run_cutadapt_times'] = len(_raw)
+    logdict['command_lines'] = _cmd
+    logdict['raw'] = _raw[0]
+    logdict['clean'] = _clean[-1]
+    logdict['clean_pct'] = '{:.2f}%'.format(int(logdict['clean'])/int(logdict['raw'])*100)
+    with open(outfile, 'w') as fo:
+        json.dump(logdict, fo, indent = 4)
+    return outfile
+
 
 def bowtie2_log_parser(path):
     """

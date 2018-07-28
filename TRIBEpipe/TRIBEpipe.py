@@ -106,10 +106,16 @@ def get_args():
         help = 'adapter sequences at 3-prime end, default: TruSeq')
     parser.add_argument('-m', metavar = 'min_length', type = int, default = 19,
         help = 'minimum length of reads, default: 19')
-    parser.add_argument('--cut', metavar = 'cut N bases', type = int, 
-        default = 0,
-        help = 'cut N bases from reads, plus value at left of read, minus value \
-        at right of read default: 0')
+    parser.add_argument('--rm_untrim', action='store_false',
+        help='if specified, discard reads without adapter')
+    parser.add_argument('--cut_before_trim', default='0', metavar='cut1', 
+        help='cut bases before trimming adapter, Number of bases to cut from each \
+        read, plus on 5-prime end, minus on 3-prime end, could be \
+        single, or double numbers, eg: 3 or -4 or 3,-4, default [0]')
+    parser.add_argument('--cut_after_trim', default='0', metavar='cut2', 
+        help='cut bases after trimming adapter, Number of bases to cut from each \
+        read, plus on 5-prime end, minus on 3-prime end, , could be \
+        single, or double numbers, eg: 3 or -4 or 3,-4, default [0]')
     parser.add_argument('--threads', metavar = 'Threads', type = int, default = 1,
         help = 'number of threads to use for the pipeline, default: 1')
     parser.add_argument('--path_data', 
@@ -122,10 +128,13 @@ def get_args():
 
 
 
-def tribe_edits_parser(fqs, outdir, genome, ad3, len_min, cut, 
-                       threads, depth_cutoff, pct_cutoff, merge = True, 
-                       trimmed = False, rm_dup=True, path_data = None, 
-                       overwrite = False):
+def tribe_edits_parser(fqs, outdir, genome, ad3, len_min, 
+                       threads, depth_cutoff, pct_cutoff, 
+                       merge=True, 
+                       trimmed=False, path_data=None,
+                       rm_dup=True, rm_untrim=False,
+                       cut_before_trim=0, cut_after_trim=0,
+                       overwrite=False):
     """extract editing events from TRIBE samples"""
     genome_fa = Genome_info(genome).get_fa()
 
@@ -135,12 +144,12 @@ def tribe_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
         logging.info('trimming skipped by --trimmed')
         tribe_clean_fq = fqs
     else:
-        tribe_clean_fq = trim.trim(fqs = fqs, adapter3 = ad3,
-                                   out_path = tribe_trim_dir, 
-                                   len_min = len_min, 
-                                   cut = cut, 
-                                   multi_cores = threads,
-                                   overwrite = False)
+        tribe_clean_fq = trim.trim(fqs, tribe_trim_dir, adapter3=ad3,
+                                   len_min=len_min, multi_cores=threads,
+                                   rm_dup=rm_dup, rm_untrim=rm_untrim,
+                                   cut_before_trim=cut_before_trim,
+                                   cut_after_trim=cut_after_trim, 
+                                   overwrite=overwrite)
 
     ## Mapping
     tribe_map_dir = os.path.join(outdir, 'mapping')
@@ -180,9 +189,12 @@ def tribe_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
 
 
 
-def gDNA_edits_parser(fqs, outdir, genome, ad3, len_min, cut, 
-                       threads, depth_cutoff, pct_cutoff, merge = True,
-                       trimmed = False, path_data = None, overwrite = False):
+def gDNA_edits_parser(fqs, outdir, genome, ad3, len_min,
+                       threads, depth_cutoff, pct_cutoff, merge=True,
+                       trimmed=False, path_data=None, 
+                       rm_dup=False, rm_untrim=False,
+                       cut_before_trim=0, cut_after_trim=0,
+                       overwrite=False):
     """extract editing events from genomic DNA-seq sample"""
     genome_fa = Genome_info(genome).get_fa()
     ## Trimming
@@ -191,13 +203,12 @@ def gDNA_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
         logging.info('trimming skipped by --trimmed')
         gDNA_clean_fq = fqs
     else:
-        gDNA_clean_fq = trim.trim(fqs = fqs, 
-                                  adapter3 = ad3,
-                                  out_path = gDNA_trim_dir, 
-                                  len_min = len_min, 
-                                  cut = cut, 
-                                  multi_cores = threads,
-                                  overwrite = overwrite)
+        gDNA_clean_fq = trim.trim(fqs, gDNA_trim_dir, adapter3=ad3,
+                           len_min=len_min, multi_cores=threads,
+                           rm_dup=rm_dup, rm_untrim=rm_untrim,
+                           cut_before_trim=cut_before_trim,
+                           cut_after_trim=cut_after_trim, 
+                           overwrite=overwrite)
 
     ## Mapping
     gDNA_map_dir = os.path.join(outdir, 'mapping')
@@ -230,10 +241,12 @@ def gDNA_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
 
 
 
-def wtRNA_edits_parser(fqs, outdir, genome, ad3, len_min, cut, 
-                       threads, depth_cutoff, pct_cutoff, merge = True,
-                       trimmed = False, rm_dup=True,
-                       path_data = None, overwrite = False):
+def wtRNA_edits_parser(fqs, outdir, genome, ad3, len_min,
+                       threads, depth_cutoff, pct_cutoff, merge=True,
+                       trimmed=False, path_data = None, 
+                       rm_dup=True, rm_untrim=False,
+                       cut_before_trim=0, cut_after_trim=0,
+                       overwrite=False):
     """extract editing events from genomic DNA-seq sample"""
     genome_fa = Genome_info(genome).get_fa()
     ## Trimming
@@ -242,13 +255,12 @@ def wtRNA_edits_parser(fqs, outdir, genome, ad3, len_min, cut,
         logging.info('trimming skipped by --trimmed')
         wtRNA_clean_fq = fqs
     else:
-        wtRNA_clean_fq = trim.trim(fqs = fqs, 
-                                   adapter3 = ad3,
-                                   out_path = wtRNA_trim_dir, 
-                                   len_min = len_min, 
-                                   cut = cut, 
-                                   multi_cores = threads,
-                                   overwrite = overwrite)
+        wtRNA_clean_fq = trim.trim(fqs, wtRNA_trim_dir, adapter3=ad3,
+                                   len_min=len_min, multi_cores=threads,
+                                   rm_dup=rm_dup, rm_untrim=rm_untrim,
+                                   cut_before_trim=cut_before_trim,
+                                   cut_after_trim=cut_after_trim, 
+                                   overwrite=overwrite)
 
     ## Mapping
     wtRNA_map_dir = os.path.join(outdir, 'mapping')
@@ -302,24 +314,30 @@ def main():
         tribe_edits = tribe_edits_parser([args.i.name, ], subdirs[0], 
                                          genome, args.a, 
                                          args.m, 
-                                         args.cut, args.threads, 
+                                         args.threads, 
                                          args.tribe_depth_cutoff, 
                                          args.tribe_pct_cutoff,
-                                         trimmed = args.trimmed,
-                                         rm_dup = args.rm_dup,
-                                         path_data = args.path_data,
-                                         overwrite = args.overwrite)
+                                         trimmed=args.trimmed,
+                                         rm_dup=args.rm_dup,
+                                         path_data=args.path_data,
+                                         rm_untrim=args.rm_untrim,
+                                         cut_before_trim=args.cut_before_trim, 
+                                         cut_after_trim=args.cut_after_trim,
+                                         overwrite=args.overwrite)
     elif isinstance(args.i, list):
         tribe_edits = tribe_edits_parser([i.name for i in args.i], subdirs[0], 
                                          genome, args.a, 
                                          args.m, 
-                                         args.cut, args.threads, 
+                                         args.threads, 
                                          args.tribe_depth_cutoff, 
                                          args.tribe_pct_cutoff,
-                                         trimmed = args.trimmed,
-                                         rm_dup = args.rm_dup,
-                                         path_data = args.path_data,
-                                         overwrite = args.overwrite)
+                                         trimmed=args.trimmed,
+                                         rm_dup=args.rm_dup,
+                                         path_data=args.path_data,
+                                         rm_untrim=args.rm_untrim,
+                                         cut_before_trim=args.cut_before_trim, 
+                                         cut_after_trim=args.cut_after_trim,
+                                         overwrite=args.overwrite)
     else:
         raise ValueError('illegal tribe samples, -i:')
 
@@ -329,22 +347,30 @@ def main():
         gDNA_edits = gDNA_edits_parser(args.gDNA.name, subdirs[1], 
                                        genome, args.a, 
                                        args.m, 
-                                       args.cut, args.threads, 
+                                       args.threads, 
                                        args.gDNA_depth_cutoff, 
                                        args.gDNA_pct_cutoff,
-                                       trimmed = args.trimmed,
-                                       path_data = args.path_data,
-                                       overwrite = args.overwrite)
+                                       trimmed=args.trimmed,
+                                       path_data=args.path_data,
+                                       rm_dup=args.rm_dup,
+                                       rm_untrim=args.rm_untrim,
+                                       cut_before_trim=args.cut_before_trim, 
+                                       cut_after_trim=args.cut_after_trim,
+                                       overwrite=args.overwrite)
     elif isinstance(args.gDNA, list):
         gDNA_edits = gDNA_edits_parser([i.name for i in args.gDNA], subdirs[1], 
                                        genome, args.a, 
                                        args.m, 
-                                       args.cut, args.threads, 
+                                       args.threads, 
                                        args.gDNA_depth_cutoff, 
                                        args.gDNA_pct_cutoff,
-                                       trimmed = args.trimmed,
-                                       path_data = args.path_data,
-                                       overwrite = args.overwrite)
+                                       trimmed=args.trimmed,
+                                       path_data=args.path_data,
+                                       rm_dup=args.rm_dup,
+                                       rm_untrim=args.rm_untrim,
+                                       cut_before_trim=args.cut_before_trim, 
+                                       cut_after_trim=args.cut_after_trim,
+                                       overwrite=args.overwrite)
     else:
         gDNA_edits = None
         logging.error('gDNA skipped, -gDNA')
@@ -355,25 +381,31 @@ def main():
         wtRNA_edits = wtRNA_edits_parser(args.wtRNA.name, subdirs[2], 
                                          genome, args.a, 
                                          args.m, 
-                                         args.cut, args.threads, 
+                                         args.threads, 
                                          args.wtRNA_depth_cutoff, 
                                          args.wtRNA_pct_cutoff,
-                                         trimmed = args.trimmed,
-                                         rm_dup = args.rm_dup,
-                                         path_data = args.path_data,
-                                         overwrite = args.overwrite)
+                                         trimmed=args.trimmed,
+                                         path_data=args.path_data,
+                                         rm_dup=args.rm_dup,
+                                         rm_untrim=args.rm_untrim,
+                                         cut_before_trim=args.cut_before_trim, 
+                                         cut_after_trim=args.cut_after_trim,
+                                         overwrite=args.overwrite) 
     elif isinstance(args.wtRNA, list):
         wtRNA_edits = wtRNA_edits_parser([i.name for i in args.wtRNA], 
                                          subdirs[2], 
                                          genome, args.a, 
                                          args.m, 
-                                         args.cut, args.threads, 
+                                         args.threads, 
                                          args.wtRNA_depth_cutoff, 
                                          args.wtRNA_pct_cutoff,
-                                         trimmed = args.trimmed,
-                                         rm_dup = args.rm_dup,
-                                         path_data = args.path_data,
-                                         overwrite = args.overwrite)
+                                         trimmed=args.trimmed,
+                                         path_data=args.path_data,
+                                         rm_dup=args.rm_dup,
+                                         rm_untrim=args.rm_untrim,
+                                         cut_before_trim=args.cut_before_trim, 
+                                         cut_after_trim=args.cut_after_trim,
+                                         overwrite=args.overwrite) 
     else:
         wtRNA_edits = None
         logging.error('wtRNA skipped, -wtRNA')
