@@ -77,6 +77,8 @@ def get_args():
 def bowtie2_se(fn, idx, path_out, para=1, multi_cores=1, overwrite=False):
     """
     Mapping SE reads to idx using Bowtie
+    filter uniquely mapped reads by samtools:
+    samtools view -bhS -q 10 in.bam > out.bam
     """
     assert isinstance(fn, str)
     assert os.path.exists(fn)
@@ -109,7 +111,7 @@ def bowtie2_se(fn, idx, path_out, para=1, multi_cores=1, overwrite=False):
     else:
         c1 = 'bowtie2 %s -p %s --mm --no-unal --un %s -x %s %s' % (para_bowtie2,
               multi_cores, fn_unmap_file, idx, fn)
-        c2 = 'samtools view -bhS -F 0x4 -@ %s -' % multi_cores
+        c2 = 'samtools view -bhS -q 10 -F 0x4 -@ %s -' % multi_cores
         c3 = 'samtools sort -@ %s -o %s -' % (multi_cores, fn_map_bam)
         with open(fn_map_log, 'wt') as fo:
             p1 = subprocess.Popen(shlex.split(c1), stdout=subprocess.PIPE, stderr=fo)
@@ -132,6 +134,7 @@ def star_se(fn, idx, path_out, para=1, multi_cores=1, overwrite=False):
     Output: bam (sorted), unmapped reads
     #
     filtering unique mapped reads by samtools
+    #
     STAR --runMode alignReads \
          --genomeDir /path/to/genome \
          --readFilesIn /path/to/reads \
