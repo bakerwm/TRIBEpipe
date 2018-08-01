@@ -217,13 +217,13 @@ def gDNA_edits_parser(fqs, outdir, genome, ad3, len_min,
     merge_name = re.sub(".rep|_rep", "", merge_name)
     if merge is True:
         b = alignment.align(gDNA_clean_fq, merge_name, gDNA_map_dir, genome, 
-                    multi_cores=threads, aligner = 'STAR', 
+                    multi_cores=threads, aligner = 'Bowtie2', 
                     path_data = path_data, overwrite = overwrite)
         gDNA_map_bam.append(b[-1])
     else:
         for fq in gDNA_clean_fq:
             b = alignment.align([fq], merge_name, gDNA_map_dir, genome, 
-                        multi_cores=threads, aligner = 'STAR', 
+                        multi_cores=threads, aligner = 'Bowtie2', 
                         path_data = path_data, overwrite = overwrite)
             gDNA_map_bam.append(b)
 
