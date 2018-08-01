@@ -213,13 +213,17 @@ def is_idx(path, aligner='bowtie'):
     check aligner index, bowtie, bowtie2, STAR
     """
     # bowtie/bowtie2
-    c = [aligner + '-inspect', '-s', path]
+    c = [aligner.lower() + '-inspect', '-s', path]
     if aligner.lower() == 'star':
         pg = os.path.join(path, 'Genome')
         flag = True if os.path.exists(pg) else False
-    else:
-        p = subprocess.run(c, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+    elif aligner.lower().startswith('bowtie'):
+        p = subprocess.run(c, check=False, stdout=subprocess.PIPE, 
+                           stderr=subprocess.PIPE).stdout
         flag = True if len(p) > 0 else False
+    else:
+        logging.error('unknown aligner: %s' % aligner)
+        flag = False # unknown aligner
     return flag
 
 
@@ -585,26 +589,33 @@ def bam2bw(bam, genome, path_out, strandness=True, binsize=1, overwrite=False):
     # prefix = os.path.basename(os.path.splitext(bam)[0])
     prefix = file_prefix(bam)[0]
     bw_log = os.path.join(path_out, prefix + '.deeptools.log')
+    logging.info('create bigWig for: %s' % prefix)
     if strandness:
         bw_fwd = os.path.join(path_out, prefix + '.fwd.bigWig')
         bw_rev = os.path.join(path_out, prefix + '.rev.bigWig')
-        c1 = 'bamCoverage -b {} -o {} --binSize {} --filterRNAstrand forward \
-              --normalizeTo1x {}'.format(bam, bw_fwd, binsize, gsize)
-        c2 = 'bamCoverage -b {} -o {} --binSize {} --filterRNAstrand reverse \
-              --normalizeTo1x {}'.format(bam, bw_rev, binsize, gsize)
-        if os.path.exists(bw_fwd) and os.path.exists(bw_rev) and not overwrite:
-            logging.info('file exists, bigWig skipped ...')
+        if os.path.exists(bw_fwd) and os.path.exists(bw_rev) and overwrite is False:
+            logging.info('bigWig file exists, skipping: %s' % prefix)
         else:
-            with open(bw_log, 'wt') as fo:
-                subprocess.run(shlex.split(c1), stdout=fo, stderr=fo)
-            with open(bw_log, 'wa') as fo:
-                subprocess.run(shlex.split(c2), stdout=fo, stderr=fo)
+            c1 = 'bamCoverage -b {} -o {} --binSize {} --filterRNAstrand forward \
+                  --normalizeTo1x {}'.format(bam, bw_fwd, binsize, gsize)
+            c2 = 'bamCoverage -b {} -o {} --binSize {} --filterRNAstrand reverse \
+                  --normalizeTo1x {}'.format(bam, bw_rev, binsize, gsize)
+            if os.path.exists(bw_fwd) and os.path.exists(bw_rev) and not overwrite:
+                logging.info('file exists, bigWig skipped ...')
+            else:
+                with open(bw_log, 'wt') as fo:
+                    subprocess.run(shlex.split(c1), stdout=fo, stderr=fo)
+                with open(bw_log, 'w') as fo:
+                    subprocess.run(shlex.split(c2), stdout=fo, stderr=fo)
     else:
         bw = os.path.join(path_out, prefix + '.bigWig')
-        c3 = 'bamCoverage -b {} -o {} --binSize {} \
-              --normalizeTo1x {}'.format(bam, bw, binsize, gsize)
-        if os.path.exists(bw) and not overwrite:
-            logging.info('file exists, bigWig skipped ...')
+        if os.path.exists(bw) and overwrite is False:
+            logging.info('bigWig file exists, skipping: %s' % prefix)
         else:
-            with open(bw_log, 'wt') as fo:
-                subprocess.run(shlex.split(c3), stdout=fo, stderr=fo)
+            c3 = 'bamCoverage -b {} -o {} --binSize {} \
+                  --normalizeTo1x {}'.format(bam, bw, binsize, gsize)
+            if os.path.exists(bw) and not overwrite:
+                logging.info('file exists, bigWig skipped ...')
+            else:
+                with open(bw_log, 'wt') as fo:
+                    subprocess.run(shlex.split(c3), stdout=fo, stderr=fo)

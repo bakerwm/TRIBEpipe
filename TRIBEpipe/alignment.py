@@ -258,7 +258,7 @@ def pcr_dup_remover(bam_in):
 
 
 def align(fns, smp_name, path_out, genome, spikein=None, multi_cores=1, 
-        aligner='bowtie2', path_data=None, overwrite=False):
+          aligner='STAR', path_data=None, overwrite=False):
     """
     mapping reads to multiple indexes, one-by-one
     """
@@ -274,7 +274,7 @@ def align(fns, smp_name, path_out, genome, spikein=None, multi_cores=1,
         idxes.append(sp)
     idxes = list(filter(None.__ne__, idxes)) # idxes
     if len(idxes) == 0:
-        raise ValueError('genome index not exists: ' + path_data)
+        raise ValueError('genome index not exists: %s' % path_data)
 
     # mapping se reads
     fn_bam_files = []
@@ -286,7 +286,7 @@ def align(fns, smp_name, path_out, genome, spikein=None, multi_cores=1,
         # fn_prefix = re.sub('_[12]$|_R[12]$', '', fn_prefix)
         path_out_fn = os.path.join(path_out, fn_prefix)
         b = map_se_batch(fn, idxes, path_out_fn, multi_cores=multi_cores,
-                         overwrite=overwrite) # list
+                         aligner=aligner, overwrite=overwrite) # list
         fn_bam_files.append(b) # bam files
         rep_map_wrapper(path_out_fn)
 
