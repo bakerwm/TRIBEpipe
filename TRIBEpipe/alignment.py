@@ -7,6 +7,10 @@ Mapping reads to reference genome
 3. to rRNA, tRNA, MT
 4. to genome
 
+Note:
+1. filtering unique mapped reads
+STAR --outFilterMultimapNmax 1 
+
 """
 
 __author__ = "Ming Wang <wangm08@hotmail.com>"
@@ -135,12 +139,20 @@ def star_se(fn, idx, path_out, para=1, multi_cores=1, overwrite=False):
          --outFileNamePrefix /name \
          --runThreadN 8 \
          --limitOutSAMoneReadBytes 1000000 \
-         --genomeLoad LoadAndKeep \
+         --genomeLoad LoadAndRemove \
          --limitBAMsortRAM 10000000000 \
          --outSAMtype BAM SortedByCoordinate \
          --outFilterMismatchNoverLMax 0.05 \
          --seedSearchStartLmax 20
 
+
+    STAR  --runThreadN 8 \
+          --outFilterMismatchNoverLmax 0.07 \
+          --outFileNamePrefix $prefix"_" \
+          --outFilterMatchNmin 16 \
+          --outFilterMultimapNmax 1 \
+          --genomeDir $star_indices \
+          --readFilesIn $input
     """
     assert isinstance(fn, str)
     assert os.path.exists(fn)
@@ -169,13 +181,13 @@ def star_se(fn, idx, path_out, para=1, multi_cores=1, overwrite=False):
               --readFilesCommand %s \
               --outFileNamePrefix %s \
               --runThreadN %s \
+              --outFilterMismatchNoverLmax 0.07 \
+              --outFilterMultimapNmax 1 \
               --limitOutSAMoneReadBytes 1000000 \
               --genomeLoad LoadAndRemove \
               --limitBAMsortRAM 10000000000 \
               --outSAMtype BAM SortedByCoordinate \
-              --outReadsUnmapped Fastx \
-              --outFilterMismatchNoverLmax 0.05 \
-              --seedSearchStartLmax 20'  % (idx, fn, freader, fn_map_prefix,
+              --outReadsUnmapped Fastx'  % (idx, fn, freader, fn_map_prefix,
                                             multi_cores)
         p1 = subprocess.run(shlex.split(c1))
         # rename exists file
