@@ -175,6 +175,11 @@ def tribe_edits_parser(fqs, outdir, genome, ad3, len_min,
                 bx = b[0]
             tribe_map_bam.append(bx)
 
+    ## create bigWig
+    tribe_bw_dir = os.path.join(outdir, 'bigWig')
+    for bam in tribe_map_bam:
+        bam2bw(bam, genome, tribe_bw_dir, overwrite=overwrite)
+
     ## extract edits
     tribe_edits_dir = os.path.join(outdir, 'edits')
     tribe_edits = []
@@ -204,11 +209,11 @@ def gDNA_edits_parser(fqs, outdir, genome, ad3, len_min,
         gDNA_clean_fq = fqs
     else:
         gDNA_clean_fq = trim.trim(fqs, gDNA_trim_dir, adapter3=ad3,
-                           len_min=len_min, multi_cores=threads,
-                           rm_dup=rm_dup, rm_untrim=rm_untrim,
-                           cut_before_trim=cut_before_trim,
-                           cut_after_trim=cut_after_trim, 
-                           overwrite=overwrite)
+                                  len_min=len_min, multi_cores=threads,
+                                  rm_dup=rm_dup, rm_untrim=rm_untrim,
+                                  cut_before_trim=cut_before_trim,
+                                  cut_after_trim=cut_after_trim, 
+                                  overwrite=overwrite)
 
     ## Mapping
     gDNA_map_dir = os.path.join(outdir, 'mapping')
@@ -217,15 +222,20 @@ def gDNA_edits_parser(fqs, outdir, genome, ad3, len_min,
     merge_name = re.sub(".rep|_rep", "", merge_name)
     if merge is True:
         b = alignment.align(gDNA_clean_fq, merge_name, gDNA_map_dir, genome, 
-                    multi_cores=threads, aligner = 'Bowtie2', 
-                    path_data = path_data, overwrite = overwrite)
+                            multi_cores=threads, aligner = 'Bowtie2', 
+                            path_data = path_data, overwrite = overwrite)
         gDNA_map_bam.append(b[-1])
     else:
         for fq in gDNA_clean_fq:
             b = alignment.align([fq], merge_name, gDNA_map_dir, genome, 
-                        multi_cores=threads, aligner = 'Bowtie2', 
-                        path_data = path_data, overwrite = overwrite)
+                                multi_cores=threads, aligner = 'Bowtie2', 
+                                path_data = path_data, overwrite = overwrite)
             gDNA_map_bam.append(b)
+
+    ## create bigWig
+    gDNA_bw_dir = os.path.join(outdir, 'bigWig')
+    for bam in gDNA_map_bam:
+        bam2bw(bam, genome, gDNA_bw_dir, overwrite=overwrite)
 
     ## extract edits
     gDNA_edits_dir = os.path.join(outdir, 'edits')
@@ -269,8 +279,8 @@ def wtRNA_edits_parser(fqs, outdir, genome, ad3, len_min,
     merge_name = re.sub(".rep|_rep", "", merge_name)
     if merge is True:
         b = alignment.align(wtRNA_clean_fq, merge_name, wtRNA_map_dir, genome, 
-                    multi_cores=threads, aligner = 'STAR', 
-                    path_data = path_data, overwrite = overwrite)
+                            multi_cores=threads, aligner = 'STAR', 
+                            path_data = path_data, overwrite = overwrite)
         if rm_dup is True:
             tribe_map_bam = [map.pcr_dup_remover(i) for i in b]
         else:
@@ -278,13 +288,18 @@ def wtRNA_edits_parser(fqs, outdir, genome, ad3, len_min,
     else:
         for fq in wtRNA_clean_fq:
             b = alignment.align([fq], merge_name, wtRNA_map_dir, genome, 
-                        multi_cores=threads, aligner = 'STAR', 
-                        path_data = path_data, overwrite = overwrite)
+                                multi_cores=threads, aligner = 'STAR', 
+                                path_data = path_data, overwrite = overwrite)
             if rm_dup is True:
                 bx = map.pcr_dup_remover(b[0])
             else:
                 bx = b[0]
             wtRNA_map_bam.append(bx)
+
+    ## create bigWig
+    wtRNA_bw_dir = os.path.join(outdir, 'bigWig')
+    for bam in wtRNA_map_bam:
+        bam2bw(bam, genome, wtRNA_bw_dir, overwrite=overwrite)
     
     ## extract edits
     wtRNA_edits_dir = os.path.join(outdir, 'edits')

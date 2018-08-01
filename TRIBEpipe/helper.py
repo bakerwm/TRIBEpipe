@@ -559,3 +559,52 @@ class Genome_info():
             ggtf = None
         return ggtf
 
+## utilities
+def bam2bw(bam, genome, path_out, strandness=True, binsize=1, overwrite=False):
+    """
+    Convert bam to bigWig using deeptools
+    https://deeptools.readthedocs.io/en/develop/content/feature/effectiveGenomeSize.html
+    history:
+    1. Mappable sequence of a genome, see Table 1 in 
+       url: https://www.nature.com/articles/nbt.1518.pdf
+    2. effective genome size:
+        - non-N bases
+        - regions (of some size) uniquely mappable
+    3. UCSC
+    http://genomewiki.ucsc.edu/index.php/Hg19_100way_Genome_size_statistics
+    http://genomewiki.ucsc.edu/index.php/Hg38_7-way_Genome_size_statistics
+    """
+    assert is_path(path_out)
+    effsize = {'dm3': 162367812,
+               'dm6': 142573017,
+               'mm9': 2620345972,
+               'mm10': 2652783500,
+               'hg19': 2451960000,
+               'hg38': 2913022398,}
+    gsize = effsize[genome]
+    # prefix = os.path.basename(os.path.splitext(bam)[0])
+    prefix = file_prefix(bam)[0]
+    bw_log = os.path.join(path_out, prefix + '.deeptools.log')
+    if strandness:
+        bw_fwd = os.path.join(path_out, prefix + '.fwd.bigWig')
+        bw_rev = os.path.join(path_out, prefix + '.rev.bigWig')
+        c1 = 'bamCoverage -b {} -o {} --binSize {} --filterRNAstrand forward \
+              --normalizeTo1x {}'.format(bam, bw_fwd, binsize, gsize)
+        c2 = 'bamCoverage -b {} -o {} --binSize {} --filterRNAstrand reverse \
+              --normalizeTo1x {}'.format(bam, bw_rev, binsize, gsize)
+        if os.path.exists(bw_fwd) and os.path.exists(bw_rev) and not overwrite:
+            logging.info('file exists, bigWig skipped ...')
+        else:
+            with open(bw_log, 'wt') as fo:
+                subprocess.run(shlex.split(c1), stdout=fo, stderr=fo)
+            with open(bw_log, 'wa') as fo:
+                subprocess.run(shlex.split(c2), stdout=fo, stderr=fo)
+    else:
+        bw = os.path.join(path_out, prefix + '.bigWig')
+        c3 = 'bamCoverage -b {} -o {} --binSize {} \
+              --normalizeTo1x {}'.format(bam, bw, binsize, gsize)
+        if os.path.exists(bw) and not overwrite:
+            logging.info('file exists, bigWig skipped ...')
+        else:
+            with open(bw_log, 'wt') as fo:
+                subprocess.run(shlex.split(c3), stdout=fo, stderr=fo)
